@@ -304,6 +304,12 @@ def _snapshot(labels: dict) -> dict:
     }
 
 
+# Inter, the typeface of the warm theme; the default theme ignores it.
+FONT = (
+    "https://fonts.googleapis.com/css2"
+    "?family=Inter:wght@400;500;600&display=swap"
+)
+
 PAGE = """<!doctype html>
 <html>
 <head>
@@ -311,7 +317,7 @@ PAGE = """<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BILRESA panel preview</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="__FONT__" rel="stylesheet">
 <style>
   html, body { margin: 0; }
   body {
@@ -510,6 +516,7 @@ def main() -> None:
         )
         .replace("__SCHEMA__", json.dumps(panel_schema()))
         .replace("__STATES__", json.dumps(states, ensure_ascii=False))
+        .replace("__FONT__", FONT)
         .replace("__PANEL_JS__", PANEL_JS)
     )
     out = HERE / "out"
