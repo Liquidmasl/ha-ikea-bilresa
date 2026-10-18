@@ -53,8 +53,16 @@ subpage (no rail, back arrow and device name in the header, channels as
 tabs); **B**, the current structure simplified. Note: the rail was the
 owner's own choice on 2026-07-15.
 
-**Single best next action:** build variants A and B in
-`tools/panel_preview`, in the owner's theme, for him to compare.
+Both variants were built the same day on `agent/panel-0.6.1` (`e2a582c`,
+not released) and shown to the owner as preview screenshots in a warm theme
+close to his. Production default stays `classic` until he chooses.
+
+The Codex reviews that ran when PRs #1 and #2 were marked ready reported no
+findings; CodeRabbit skipped both (too many files; non-default base). The
+merges were made before those reviews finished.
+
+**Single best next action:** the owner picks A or B; delete the other layout
+and finish the chosen one for 0.6.1.
 
 ## Pull request 8: contributor answered; measurement recorded (2026-10-06)
 
