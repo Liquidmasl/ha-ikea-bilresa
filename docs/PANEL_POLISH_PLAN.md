@@ -280,3 +280,27 @@ versus "single press" wording, which waits for the owner's decision.
 2. Which phases must be in the stable 0.6.0. Recommendation: Phase 0 and
    Phase 1 before it, Phases 2 to 5 after it, because rc.14 already carries a
    large change that has to reach stable first.
+
+## 0.6.1 — structure (2026-10-18)
+
+A critique on 2026-10-18 found the remaining problem in the structure, not
+the styling: a second sidebar beside Home Assistant's own, a custom channel
+spine that needs a paragraph to explain it, duplicate headings, "Connected"
+on every card, and overview rows that lead with the mode instead of the
+target. Two layouts are now in the panel for the owner to compare in
+`tools/panel_preview` (`layout=subpage` or `layout=classic`, with
+`theme=warm`):
+
+- **A, subpage.** The header carries a back arrow and the device's name; no
+  rail; every channel or button is its own card on one page; the views stay
+  as tabs. Selected by `panel.config.layout = "subpage"`.
+- **B, classic, simplified.** The rail and the spine stay.
+
+Both already share: overview rows lead with the target, the device state is
+shown only when it is not "connected", the overview's title and "N connected"
+line are gone (the header names the page, an outage has its banner), and the
+paragraphs explaining the channel and button navigation are gone.
+
+The production default stays `classic` until the owner chooses; the losing
+layout is then deleted, not kept behind the switch.
+

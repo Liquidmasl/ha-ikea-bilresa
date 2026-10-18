@@ -8,6 +8,9 @@ and field schema, and a synthetic home. Serve the folder and open it:
 
 Query parameters: ``lang=cs`` (default ``en``), ``dark=1``, ``narrow=1`` (no
 sidebar, phone layout), ``inset=16`` (a theme that pads the panel),
+``theme=warm`` (a warm custom theme with large radii and a white header, the
+kind the owner runs, instead of Home Assistant's default),
+``layout=subpage`` (the subpage layout under comparison for 0.6.1),
 ``open=<wheel key>`` with ``view=channels|buttons|live|diagnostics``, and
 ``edit=<n>`` to open the editor of channel or button ``n``.
 
@@ -307,6 +310,8 @@ PAGE = """<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BILRESA panel preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   html, body { margin: 0; }
   body {
@@ -344,6 +349,47 @@ PAGE = """<!doctype html>
     --app-header-background-color: #101e24;
     --app-header-text-color: #e1e1e1;
   }
+  /* A warm custom theme: white header, beige page, brown accent, 20 px cards,
+     Inter. Close to the community theme the owner uses, not a copy of it. */
+  body.warm {
+    font-family: Inter, system-ui, sans-serif;
+    --ha-font-family-body: Inter, system-ui, sans-serif;
+    --primary-color: #856529;
+    --primary-text-color: #33270b;
+    --secondary-text-color: #716345;
+    --text-primary-color: #fafaf9;
+    --primary-background-color: #eeebe5;
+    --secondary-background-color: #e7e2d8;
+    --card-background-color: #ffffff;
+    --ha-card-background: #ffffff;
+    --divider-color: #e4ddcf;
+    --error-color: #7c2f2c;
+    --success-color: #245a1e;
+    --state-icon-color: #716345;
+    --app-header-background-color: #ffffff;
+    --app-header-text-color: #33270b;
+    --ha-card-border-radius: 20px;
+    --ha-card-border-color: #e4ddcf;
+    --ha-border-radius-md: 12px;
+    --ha-border-radius-lg: 12px;
+  }
+  body.warm.dark {
+    --primary-color: #cebb9c;
+    --primary-text-color: #ede7dc;
+    --secondary-text-color: #b9ae99;
+    --text-primary-color: #12100d;
+    --primary-background-color: #120e06;
+    --secondary-background-color: #19140a;
+    --card-background-color: #1d1913;
+    --ha-card-background: #1d1913;
+    --divider-color: #35322a;
+    --error-color: #f9cfcb;
+    --success-color: #cae3c6;
+    --state-icon-color: #b9ae99;
+    --app-header-background-color: #1d1913;
+    --app-header-text-color: #ede7dc;
+    --ha-card-border-color: #35322a;
+  }
   #sidebar {
     position: sticky;
     top: 0;
@@ -377,6 +423,7 @@ const params = new URLSearchParams(location.search);
 const lang = params.get("lang") === "cs" ? "cs" : "en";
 document.documentElement.lang = lang;
 if (params.get("dark")) document.body.classList.add("dark");
+if (params.get("theme") === "warm") document.body.classList.add("warm");
 const narrow = Boolean(params.get("narrow"));
 if (narrow) document.getElementById("sidebar").remove();
 const frame = document.getElementById("frame");
@@ -403,7 +450,13 @@ const hass = {
   },
 };
 const panel = document.createElement("ikea-bilresa-panel");
-panel.panel = { config: { labels: LABELS[lang], schema: SCHEMA } };
+panel.panel = {
+  config: {
+    labels: LABELS[lang],
+    schema: SCHEMA,
+    layout: params.get("layout") || "classic",
+  },
+};
 panel.narrow = narrow;
 if (params.get("open")) {
   panel._open = params.get("open");

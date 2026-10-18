@@ -336,7 +336,7 @@ const STYLES = `
     flex-wrap: wrap;
     align-items: center;
     gap: var(--_space-3) var(--_space-5);
-    margin-block-start: var(--_space-4);
+    margin-block-end: var(--_space-4);
     font-size: var(--ha-font-size-m, 14px);
   }
   .summary-item {
@@ -408,7 +408,7 @@ const STYLES = `
     min-block-size: 88px;
     padding: var(--_space-5) var(--_space-6);
   }
-  .wheel-names { min-inline-size: 0; }
+  .wheel-names { flex: 1 1 auto; min-inline-size: 0; }
   /* The device glyph. --state-icon-color is HA's own entity-icon colour and
      clears the 3:1 non-text bar; an icon may carry it where a word may not. */
   /* The BILRESA glyph draws with currentColor (outline + dots), so it is
@@ -502,18 +502,18 @@ const STYLES = `
     font-weight: var(--ha-font-weight-medium, 500);
   }
   .channel-text { min-inline-size: 0; flex: 1; }
-  .channel-behaviour,
-  .channel-target {
+  .channel-primary,
+  .channel-secondary {
     display: block;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .channel-behaviour {
+  .channel-primary {
     font-size: var(--ha-font-size-l, 16px);
     line-height: var(--ha-line-height-condensed, 1.2);
   }
-  .channel-target {
+  .channel-secondary {
     margin-block-start: var(--_space-1);
     color: var(--_ink-dim);
     font-size: var(--ha-font-size-m, 14px);
@@ -521,7 +521,7 @@ const STYLES = `
   /* Dimmed, not italic: HA never italicises a state, and an italic label is a
      reliable generated-UI tell. --_ink-dim clears AA; --disabled-text-color
      does not (2.8:1) and must not be used to say "empty". */
-  .channel[data-state="empty"] .channel-behaviour { color: var(--_ink-dim); }
+  .channel[data-state="empty"] .channel-primary { color: var(--_ink-dim); }
   .channel-warn,
   .wheel-open {
     flex: 0 0 auto;
@@ -627,6 +627,34 @@ const STYLES = `
       max(var(--_space-10), env(safe-area-inset-bottom, 0px)) var(--_space-6);
   }
   .detail-inner { inline-size: min(100%, var(--_detail-max)); }
+  .detail-inner.subpage { margin-inline: auto; }
+  .subpage-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--_space-3);
+    margin-block-end: var(--_space-2);
+    color: var(--_ink-dim);
+    font-size: var(--ha-font-size-m, 14px);
+  }
+  .subpage-glyph {
+    flex: 0 0 auto;
+    inline-size: 32px;
+    block-size: 32px;
+    color: var(--_accent);
+    fill: currentColor;
+  }
+  .subpage-meta-copy { flex: 1 1 auto; min-inline-size: 0; }
+  .control-stack { display: grid; gap: var(--_space-4); }
+  .control-card {
+    min-inline-size: 0;
+    container-type: inline-size;
+    padding: var(--_space-6);
+    border: var(--ha-card-border-width, 1px) solid var(--_border);
+    border-radius: var(--_radius);
+    background: var(--_card);
+    box-shadow: var(--ha-card-box-shadow, none);
+  }
+  .control-card .channel-empty { min-block-size: 0; }
   .detail-top {
     display: flex;
     align-items: flex-start;
@@ -1962,12 +1990,40 @@ class IkeaBilresaPanel extends HTMLElement {
       (control.profile !== null && control.profile !== undefined);
   }
 
+  // Two layouts are under comparison for 0.6.1 (PANEL_POLISH_PLAN.md, 0.6.1).
+  // "subpage" is a Home Assistant subpage: a back arrow and the device name in
+  // the header, no second sidebar, every channel on one page. "classic" keeps
+  // the rail and the channel spine. Only the preview selects "subpage" for now.
+  _layout() {
+    return this._panel?.config?.layout === "subpage" ? "subpage" : "classic";
+  }
+
+  _openDevice() {
+    if (!this._open || !this._snapshot) return null;
+    return this._snapshot.wheels.find((item) => item.key === this._open) || null;
+  }
+
   _showMenuButton() {
     return Boolean(this._narrow) || this._hass?.dockedSidebar === "always_hidden";
   }
 
   _header() {
     const bar = el("header");
+    const device = this._layout() === "subpage" ? this._openDevice() : null;
+    if (device) {
+      // A Home Assistant subpage: the way back sits where the menu button would,
+      // and the bar names the page. No second "back" anywhere below.
+      const back = el("button", "icon-button");
+      back.id = "header-back";
+      back.type = "button";
+      back.setAttribute("aria-label", this._t("back"));
+      back.title = this._t("back");
+      back.appendChild(svg(ICON.back));
+      back.addEventListener("click", () => this._backToOverview());
+      bar.appendChild(back);
+      bar.appendChild(el("h1", null, device.name));
+      return bar;
+    }
     if (this._showMenuButton()) {
       const menu = el("button", "icon-button");
       menu.type = "button";
@@ -1991,26 +2047,20 @@ class IkeaBilresaPanel extends HTMLElement {
     return item;
   }
 
+  // The bar already names the page, and a Matter outage has its own banner.
+  // What is left to say here is only what is wrong: devices that are not
+  // connected. A healthy home gets no line at all.
   _overviewHead() {
     const s = this._snapshot;
-    const head = el("div", "overview-head");
-    head.appendChild(el("h1", null, this._t("overview_title")));
-
-    const wrap = el("div", "summary");
-    const connected = s.wheels.filter(
-      (wheel) => wheel.availability === "connected",
-    ).length;
     const unknown = s.wheels.filter(
       (wheel) => wheel.availability === "unknown",
     ).length;
-    const unavailable = s.wheels.length - connected - unknown;
-
-    wrap.appendChild(
-      this._summaryItem(
-        this._t("summary_connected", { count: connected }),
-        "connected",
-      ),
-    );
+    const unavailable = s.wheels.filter(
+      (wheel) => wheel.availability !== "connected" &&
+        wheel.availability !== "unknown",
+    ).length;
+    if (!unavailable && !unknown) return null;
+    const wrap = el("div", "summary");
     if (unavailable > 0) {
       wrap.appendChild(
         this._summaryItem(
@@ -2027,14 +2077,7 @@ class IkeaBilresaPanel extends HTMLElement {
         ),
       );
     }
-    wrap.appendChild(
-      this._summaryItem(
-        this._t(s.matter_connected ? "matter_connected" : "matter_offline"),
-        s.matter_connected ? "connected" : "unavailable",
-      ),
-    );
-    head.appendChild(wrap);
-    return head;
+    return wrap;
   }
 
   _banner(text) {
@@ -2061,20 +2104,27 @@ class IkeaBilresaPanel extends HTMLElement {
     row.dataset.state = configured ? "ok" : "empty";
     row.appendChild(el("span", "channel-n", String(number)));
 
+    // The light is what a person recognises; "Smooth dimming" was the same on
+    // every row of a typical home, so it no longer leads.
     const text = el("span", "channel-text");
     text.appendChild(
       el(
         "span",
-        "channel-behaviour",
-        control.behaviour ||
-          (configured ? control.profile : this._t("not_configured")),
+        "channel-primary",
+        configured
+          ? this._controlTargetText(control) ||
+              control.behaviour ||
+              control.profile
+          : this._t("not_configured"),
       ),
     );
     text.appendChild(
       el(
         "span",
-        "channel-target",
-        this._controlTargetText(control) || this._t("add_binding"),
+        "channel-secondary",
+        configured
+          ? control.behaviour || control.profile || ""
+          : this._t("add_binding"),
       ),
     );
     row.appendChild(text);
@@ -2103,7 +2153,11 @@ class IkeaBilresaPanel extends HTMLElement {
     if (wheel.last_activity) sub.title = this._formatDate(wheel.last_activity);
     names.appendChild(sub);
     head.appendChild(names);
-    head.appendChild(this._status(wheel.availability));
+    // "Connected" on every card is the normal case said again and again; the
+    // state earns a place only when it is not normal.
+    if (wheel.availability !== "connected") {
+      head.appendChild(this._status(wheel.availability));
+    }
     head.appendChild(svg(ICON.chevron, "wheel-open"));
     card.appendChild(head);
 
@@ -2251,7 +2305,9 @@ class IkeaBilresaPanel extends HTMLElement {
     if (wheel.last_activity) metaNode.title = this._formatDate(wheel.last_activity);
     heading.appendChild(metaNode);
     top.appendChild(heading);
-    top.appendChild(this._status(wheel.availability));
+    if (wheel.availability !== "connected") {
+      top.appendChild(this._status(wheel.availability));
+    }
     return top;
   }
 
@@ -3491,9 +3547,26 @@ class IkeaBilresaPanel extends HTMLElement {
     return section;
   }
 
+  // Subpage layout: every channel or button is its own card, in order, on
+  // one page. Nothing to navigate, so nothing to explain.
+  _stackedControls(wheel) {
+    const stack = el("div", "control-stack");
+    for (const control of this._controlsFor(wheel)) {
+      const card = el("section", "control-card");
+      card.appendChild(this._channelDetail(wheel, control));
+      stack.appendChild(card);
+    }
+    return stack;
+  }
+
   _channelsView(wheel) {
     const wrap = el("div");
-    wrap.appendChild(this._sectionHead(this._t("detail_channels_intro")));
+    if (this._layout() === "subpage") {
+      wrap.appendChild(this._stackedControls(wheel));
+      wrap.appendChild(this._activeChannelsSection(wheel));
+      wrap.appendChild(this._dialSection(wheel));
+      return wrap;
+    }
 
     const open =
       wheel.channels.find((item) => item.channel === this._openChannel) ||
@@ -3570,7 +3643,10 @@ class IkeaBilresaPanel extends HTMLElement {
 
   _buttonsView(wheel) {
     const wrap = el("div");
-    wrap.appendChild(this._sectionHead(this._t("detail_buttons_intro")));
+    if (this._layout() === "subpage") {
+      wrap.appendChild(this._stackedControls(wheel));
+      return wrap;
+    }
 
     const buttons = wheel.buttons || [];
     const open =
@@ -4280,7 +4356,37 @@ class IkeaBilresaPanel extends HTMLElement {
     return panel;
   }
 
+  // Subpage layout: the header carries the way back and the name, so the
+  // page starts with what the device is doing and the views.
+  _subpageDetail(wheel) {
+    const inner = el("div", "detail-inner subpage");
+    if (!this._snapshot.matter_connected) {
+      inner.appendChild(this._banner(this._t("banner_matter_offline")));
+    } else if (this._error) {
+      inner.appendChild(this._banner(this._t("banner_updates_stopped")));
+    }
+    const meta = el("div", "subpage-meta");
+    meta.appendChild(deviceIcon(wheel, "subpage-glyph"));
+    const copy = el("span", "subpage-meta-copy");
+    for (const part of [
+      wheel.area || this._t("detail_area_none"),
+      this._activityLabel(wheel),
+    ].filter(Boolean)) {
+      copy.appendChild(el("span", "detail-meta-part", part));
+    }
+    if (wheel.last_activity) copy.title = this._formatDate(wheel.last_activity);
+    meta.appendChild(copy);
+    if (wheel.availability !== "connected") {
+      meta.appendChild(this._status(wheel.availability));
+    }
+    inner.appendChild(meta);
+    inner.appendChild(this._tabs(wheel));
+    inner.appendChild(this._detailPanel(wheel));
+    return inner;
+  }
+
   _detail(wheel) {
+    if (this._layout() === "subpage") return this._subpageDetail(wheel);
     const shell = el("div", "detail-shell");
     shell.appendChild(this._rail());
 
@@ -4396,7 +4502,8 @@ class IkeaBilresaPanel extends HTMLElement {
         ),
       );
     }
-    wrap.appendChild(this._overviewHead());
+    const head = this._overviewHead();
+    if (head) wrap.appendChild(head);
     const grid = el("div", "grid");
     for (const wheel of this._snapshot.wheels) grid.appendChild(this._wheel(wheel));
     wrap.appendChild(grid);
@@ -4410,7 +4517,9 @@ class IkeaBilresaPanel extends HTMLElement {
     const main = el("main");
     // The detail's rail runs to the viewport edge, so the page frame lives on
     // .detail-pane instead of here.
-    if (this._open && this._snapshot) main.dataset.view = "detail";
+    if (this._open && this._snapshot && this._layout() === "classic") {
+      main.dataset.view = "detail";
+    }
     main.appendChild(this._body());
     this.shadowRoot.replaceChildren(style, this._header(), main);
     if (focused) this.shadowRoot.getElementById(focused)?.focus({ preventScroll: true });

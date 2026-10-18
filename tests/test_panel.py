@@ -550,7 +550,7 @@ def test_an_unconfigured_channel_stays_lighter_than_a_configured_one() -> None:
     styles = asset.split("const STYLES = `", 1)[1].split("`;", 1)[0]
     assert "var(--disabled-text-color" not in styles
     assert (
-        '.channel[data-state="empty"] .channel-behaviour { color: var(--_ink-dim); }'
+        '.channel[data-state="empty"] .channel-primary { color: var(--_ink-dim); }'
         in styles
     )
 
