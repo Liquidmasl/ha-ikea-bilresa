@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning 2.0.0](https://semver.org/spec/
 
 ## [Unreleased]
 
+## [0.6.1-rc.1] - 2026-10-18
+
 ### Changed
 - **An opened wheel or dual button is now a Home Assistant subpage.** The
   header shows a back arrow and the device's name, the second sidebar listing
@@ -910,7 +912,8 @@ cannot be undone without a backup. Take a backup first.
 - Single-instance config flow with automatic Matter Server URL detection.
 - English and Czech translations.
 
-[Unreleased]: https://github.com/Vituhlos/ha-ikea-bilresa/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/Vituhlos/ha-ikea-bilresa/compare/v0.6.1-rc.1...HEAD
+[0.6.1-rc.1]: https://github.com/Vituhlos/ha-ikea-bilresa/compare/v0.6.0...v0.6.1-rc.1
 [0.6.0]: https://github.com/Vituhlos/ha-ikea-bilresa/compare/v0.5.0...v0.6.0
 [0.6.0-rc.6]: https://github.com/Vituhlos/ha-ikea-bilresa/compare/v0.6.0-rc.5...v0.6.0-rc.6
 [0.6.0-rc.5]: https://github.com/Vituhlos/ha-ikea-bilresa/compare/v0.6.0-rc.4...v0.6.0-rc.5
