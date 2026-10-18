@@ -305,10 +305,7 @@ def _snapshot(labels: dict) -> dict:
 
 
 # Inter, the typeface of the warm theme; the default theme ignores it.
-FONT = (
-    "https://fonts.googleapis.com/css2"
-    "?family=Inter:wght@400;500;600&display=swap"
-)
+FONT = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
 
 PAGE = """<!doctype html>
 <html>
