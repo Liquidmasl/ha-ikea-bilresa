@@ -2,6 +2,60 @@
 
 Last updated: **2026-10-04 by Claude Code**
 
+## Stable `v0.6.0` released (2026-10-18)
+
+Status: **Released (stable, marked latest) + CI. Not deployed: the owner's
+instance runs `v0.6.0-rc.17`, whose code is identical apart from the version
+string.**
+
+The owner decided on 2026-10-18 to release now and to handle the panel's look
+in 0.6.1. `docs/V0.6.0_CHECKLIST.md` items 1 (smoothing A/B), 3 (Section G)
+and the rest of 4 (dark theme, keyboard and screen reader pass) were still
+open and ship as they are.
+
+- Release commit `5a7c5af` on `agent/dual-button-0.6`: manifest `0.6.0`, a
+  stable changelog section summarising 0.5.0 to 0.6.0 with the upgrade notes,
+  both READMEs pointing at the stable release. CI run `39114968270` green.
+- Merge chain per the checklist, with merge commits so the pre-release tags
+  stay reachable: PR #2 into `agent/stabilize-0.5-x` (`acc635c`), then PR #1
+  into `main` (`72b1fbe`). The tree of `main` is identical to `5a7c5af`. CI
+  on `main` run `39115083881` green.
+- Annotated tag `v0.6.0` on `72b1fbe`; GitHub release
+  https://github.com/Vituhlos/ha-ikea-bilresa/releases/tag/v0.6.0, not a
+  pre-release, marked latest.
+- Saving through the rc.16+ editor was exercised by the owner before the
+  release: the instance shows a first-time dial settings save for
+  `Kolečko Nelča` and a new revision of its channel 1 binding, with no error
+  in the log.
+
+Work for 0.6.1 continues on branch `agent/panel-0.6.1`, cut from `main`.
+
+### Owed to outside contributors now that 0.6.0 is out
+
+- Issue #3: the last reply said it stays open until the stable release ships.
+- PR #5: port `short_release` after 0.6.0, crediting amodig (committed in a
+  reply on 2026-10-04).
+- PR #8: the reply said it stays open until the stable 0.6.0 is out.
+
+Each reply needs the owner's approval first; nothing is closed or merged
+without his decision.
+
+### Panel critique and the 0.6.1 direction
+
+An Impeccable-guided critique on 2026-10-18 (single context, detector not
+run) scored the panel 27/40 and found its structure, not its styling, at odds
+with Home Assistant: a second 256 px sidebar beside Home Assistant's own, a
+custom channel spine that needs a paragraph to explain it, duplicate headings,
+and an overview whose primary line is the mode ("Plynulé stmívání" on every
+row) instead of the target. The owner asked to see two variants side by side
+in the local preview before anything is decided: **A**, a Home Assistant
+subpage (no rail, back arrow and device name in the header, channels as
+tabs); **B**, the current structure simplified. Note: the rail was the
+owner's own choice on 2026-07-15.
+
+**Single best next action:** build variants A and B in
+`tools/panel_preview`, in the owner's theme, for him to compare.
+
 ## Pull request 8: contributor answered; measurement recorded (2026-10-06)
 
 Status: **Docs only.** cassus replied twice on pull request 8 (2026-10-05 and
