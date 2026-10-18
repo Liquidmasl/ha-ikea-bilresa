@@ -2,6 +2,26 @@
 
 Last updated: **2026-10-04 by Claude Code**
 
+## `v0.6.1-rc.2` published and deployed (2026-10-18)
+
+Status: **Released (pre-release) + CI + deployed. Not yet seen in the owner's
+Home Assistant by the agent.**
+
+- CI run `39123309505` passed for exact commit `aa758f6` (workflow_dispatch;
+  includes the newest Home Assistant pre-release job).
+- Annotated tag `v0.6.1-rc.2` on `aa758f6`; pre-release at
+  https://github.com/Vituhlos/ha-ikea-bilresa/releases/tag/v0.6.1-rc.2.
+- **Backup on the Synology NAS only**, at the owner's request: one backup
+  `pred-bilresa-0.6.1-rc.2-2026-10-18` (`79ed7d29`, 1.19 GB) to the agent
+  `synology_dsm.2260S6RZATVV9` ("JosefNAS"), none local. It is unencrypted,
+  like every automatic backup on that location: the location's own setting is
+  `protected: false`. The generate call passed the instance's backup password
+  internally; Home Assistant applies it only where a location is protected.
+- HACS installed exactly `v0.6.1-rc.2`; Home Assistant restarted (the MCP
+  transport dropped during the restart call, not repeated). Read back:
+  manifest `0.6.1-rc.2`, entry `loaded`, contract 6, three devices, no system
+  log entry from the integration.
+
 ## Owner's verdict on rc.1, and the compact card layout (2026-10-18)
 
 Status: **Code + tests + preview, not released.** The owner's screenshots of
