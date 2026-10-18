@@ -2,6 +2,29 @@
 
 Last updated: **2026-10-04 by Claude Code**
 
+## 0.6.1: layout A implemented (2026-10-18)
+
+Status: **Code + local tests + preview. Not released, not deployed, not yet
+seen in a real Home Assistant.** Branch `agent/panel-0.6.1`.
+
+The owner chose layout A (Home Assistant subpage) and moved the room-light
+profile from discussion #7 to 0.7.0, together with the PR #5 port.
+
+- The classic layout is deleted: `_rail`, `_detailTop`, `_mobileBack`, the
+  channel/button spine, `_openChannelAt` / `_openButtonAt`, their CSS and
+  five unused strings. The panel script went from 4,531 to about 4,040 lines.
+- Every channel or button is a card (`control-card`, id
+  `control-<wheel>-<n>`); "Configure from the live test" now opens the editor
+  in that card and scrolls to it. A switched-off channel shows a note.
+- The page itself (`.detail-inner.subpage`) is now the container the live test
+  and diagnostics measure; it used to be the deleted `.detail-pane`.
+- Checked: ruff, mypy, 487 Python tests, 41 frontend tests; preview at
+  1280 px and 390 px, no horizontal overflow, live test and diagnostics
+  collapse to one column on a phone, no console errors.
+
+**Not yet:** a look in the owner's real Home Assistant (needs a deployment or a
+signed-in browser), the keyboard and screen reader pass.
+
 ## Stable `v0.6.0` released (2026-10-18)
 
 Status: **Released (stable, marked latest) + CI. Not deployed: the owner's

@@ -103,7 +103,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "retry": "Try again",
         # detail
         "back": "Back to all BILRESA devices",
-        "wheel_switcher": "BILRESA devices",
         "detail_views": "Device detail views",
         "field_step_curve": "Step placement",
         "field_step_curve_help": (
@@ -115,6 +114,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "step_curve_linear": "Linear (default)",
         "step_curve_perceptual": "Perceptual (even to the eye)",
         "settings_channels_title": "Active channels",
+        "channel_off_note": (
+            "it does nothing until you switch it on under Active channels below."
+        ),
         "settings_channels_saved": "Saved",
         "settings_dial_title": "Dial",
         "settings_dial_intro": (
@@ -153,11 +155,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "detail_last_button": "Last active button",
         "detail_no_last_button": "No button observed yet",
         "detail_channels_heading": "Physical position behaviour",
-        "detail_channels_intro": (
-            "The three selector positions on the wheel are also the navigation. "
-            "Pick a position to review or edit its gestures in place."
-        ),
-        "channel_spine": "Wheel channels",
         "channel_empty_title": "Channel {channel} is waiting for a binding",
         "channel_empty_body": (
             "Pick a behaviour and a target. The other two physical positions "
@@ -165,11 +162,6 @@ STRINGS: dict[str, dict[str, str]] = {
         ),
         "channel_title": "Channel {channel}",
         "channel_binding": "Binding",
-        "detail_buttons_intro": (
-            "The two physical buttons are also the navigation. Pick a button to "
-            "review or edit its gestures in place."
-        ),
-        "button_spine": "Dual-button controls",
         "button_empty_title": "Button {button} is waiting for a binding",
         "button_empty_body": (
             "Choose what a short press, double press and hold should control."
@@ -523,7 +515,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "error_title": "Integrace není dostupná",
         "retry": "Zkusit znovu",
         "back": "Zpět na všechna zařízení BILRESA",
-        "wheel_switcher": "Zařízení BILRESA",
         "detail_views": "Pohledy detailu zařízení",
         "field_step_curve": "Rozložení kroků",
         "field_step_curve_help": (
@@ -535,6 +526,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "step_curve_linear": "Lineární (výchozí)",
         "step_curve_perceptual": "Percepční (rovnoměrné pro oko)",
         "settings_channels_title": "Aktivní kanály",
+        "channel_off_note": (
+            "nic nedělá, dokud ho nezapnete v části Aktivní kanály níže."
+        ),
         "settings_channels_saved": "Uloženo",
         "settings_dial_title": "Číselník",
         "settings_dial_intro": (
@@ -575,11 +569,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "detail_last_button": "Naposledy aktivní tlačítko",
         "detail_no_last_button": "Zatím nebylo pozorováno žádné tlačítko",
         "detail_channels_heading": "Chování fyzických poloh",
-        "detail_channels_intro": (
-            "Tři polohy přepínače na kolečku jsou zároveň navigací. Vyberte "
-            "polohu a upravte její gesta bez přesunu na další stránku."
-        ),
-        "channel_spine": "Kanály kolečka",
         "channel_empty_title": "Kanál {channel} čeká na propojení",
         "channel_empty_body": (
             "Zvolte chování a cíl. Ostatní dvě fyzické polohy kolečka zůstanou "
@@ -587,11 +576,6 @@ STRINGS: dict[str, dict[str, str]] = {
         ),
         "channel_title": "Kanál {channel}",
         "channel_binding": "Propojení",
-        "detail_buttons_intro": (
-            "Dvě fyzická tlačítka jsou zároveň navigací. Vyberte tlačítko a "
-            "upravte jeho gesta bez přesunu na další stránku."
-        ),
-        "button_spine": "Tlačítka dvoutlačítka",
         "button_empty_title": "Tlačítko {button} čeká na propojení",
         "button_empty_body": (
             "Zvolte, co má ovládat krátký stisk, dvojitý stisk a podržení."

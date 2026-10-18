@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-import re
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
@@ -346,93 +345,50 @@ def test_panel_asset_grid_does_not_leave_a_phantom_column() -> None:
     assert "repeat(auto-fill," not in asset
 
 
-def test_panel_detail_keeps_the_measured_rail_and_pane_breakpoints() -> None:
-    """The rail width and pane threshold came from measured layout evidence."""
+def test_panel_detail_collapses_on_its_own_width_not_the_window() -> None:
+    """Two columns collapse on the width of the card or page they sit in."""
     asset = _asset()
 
-    assert "--_rail-width: 256px;" in asset
-    assert "grid-template-columns: var(--_rail-width) minmax(0, 1fr);" in asset
-    assert "@media (max-width: 619px)" in asset
-    assert ".rail { display: none; }" in asset
-    # This must be a container query on the detail pane, never a window query.
-    assert "container-type: inline-size;" in asset
+    # Container queries, never a window query: a channel card is narrower than
+    # the window, and the page is narrower than the window beside the sidebar.
     assert "@container (max-width: 700px)" in asset
     assert "@media (max-width: 700px)" not in asset
+    assert ".control-card {" in asset
+    card = asset.split("  .control-card {", 1)[1].split("  }", 1)[0]
+    assert "container-type: inline-size;" in card
+    # The live test and diagnostics measure the page itself.
+    assert (
+        ".detail-inner.subpage { margin-inline: auto; container-type: inline-size; }"
+        in asset
+    )
     # The detail needs the overview's ceiling too: without it a wide window
     # drags a fact's label and its value to opposite ends of the screen.
     assert "--_detail-max: 1100px;" in asset
     assert ".detail-inner { inline-size: min(100%, var(--_detail-max)); }" in asset
 
 
-def test_panel_detail_puts_desktop_back_navigation_inside_the_rail() -> None:
-    """The desktop detail must not create a third column before the wheel title."""
-    asset = _asset()
-    rail = asset.split("  _rail() {", 1)[1].split("  _statusDot(", 1)[0]
-    back_rule = asset.split("  .back-button {", 1)[1].split("  .back-button:hover", 1)[
-        0
-    ]
+def test_panel_detail_is_a_home_assistant_subpage() -> None:
+    """A back arrow and the device name in the bar; no second sidebar.
 
-    assert 'el("button", "rail-back")' in rail
-    assert "this._backToOverview()" in rail
-    assert ".back-button {\n    display: none;" in asset
-    assert "display: inline-flex;" not in back_rule
-    assert "@media (max-width: 619px)" in asset
-    assert (
-        ".back-button { display: inline-flex; margin-block-end: var(--_space-4); }"
-        in asset
-    )
-
-
-def test_rail_wheel_declares_a_column_for_every_child_it_renders() -> None:
-    """A four-child button in a three-column grid wraps and misaligns.
-
-    The shipped rail declared `auto minmax(0, 1fr) auto` and then appended four
-    children: glyph, status dot, copy, tick. The dot took the 1fr track, so every
-    wheel name was pushed flush right with a gap beside it, and the tick wrapped
-    onto a second row inside the open wheel's button. Both defects were visible
-    in the owner's screenshots and neither was caught by a test, because nothing
-    asserted the grid and the children agree.
+    HACS, the KNX panel, Alarmo and Home Assistant's own device pages are built
+    this way. The 256 px rail beside Home Assistant's sidebar was the main
+    reason the panel did not read as part of Home Assistant (2026-10-18).
     """
     asset = _asset()
-    rail = asset.split("  _rail() {", 1)[1].split("  _statusDot(", 1)[0]
-    rule = asset.split("  .rail-wheel {", 1)[1].split("  }", 1)[0]
+    header = asset.split("  _header() {", 1)[1].split("  _summaryItem(", 1)[0]
 
-    columns = re.search(r"grid-template-columns:\s*([^;]+);", rule)
-    assert columns is not None
-    # count top-level tracks: minmax(0, 1fr) is one track, not two
-    tracks = re.sub(r"\([^)]*\)", "", columns.group(1)).split()
-    assert len(tracks) == 3
-
-    appends = re.findall(r"button\.appendChild\(", rail)
-    assert len(appends) == 3, "the rail button must render one child per column"
-
-    # The tick is gone; the state is carried by the three signals below instead.
-    assert "rail-check" not in asset
-    assert 'svg(ICON.check, "rail-check")' not in rail
-
-
-def test_the_open_wheel_is_not_marked_by_a_tint_alone() -> None:
-    """Measured in both default themes: the selected tint is only 1.22:1.
-
-    A selected background that faint is a colour-only signal, and it is the sole
-    remaining marker once the (broken, redundant) tick is removed. Home
-    Assistant's own sidebar answers this with an accent icon and heavier text,
-    so the rail does the same: the glyph may take the accent where a word may
-    not, because an icon clears the 3:1 non-text bar.
-    """
-    asset = _asset()
-
-    assert (
-        '.rail-wheel[aria-current="page"] .rail-glyph { color: var(--_accent); }'
-        in asset
-    )
-    assert ".rail-glyph {\n    flex: 0 0 auto;\n    inline-size: 26px;" in asset
-    assert "color: var(--_ink-dim);\n    fill: currentColor;" in asset
-    assert '.rail-wheel[aria-current="page"] .rail-name {' in asset
-    assert (
-        '.rail-wheel[aria-current="page"] {\n    background: var(--_selected);\n  }'
-        in asset
-    )
+    assert 'back.id = "header-back"' in header
+    assert "back.appendChild(svg(ICON.back))" in header
+    assert "this._backToOverview()" in header
+    assert 'el("h1", null, device.name)' in header
+    for gone in (
+        "_rail()",
+        "--_rail-width",
+        ".rail-wheel",
+        "_mobileBack()",
+        "_detailTop(",
+    ):
+        assert gone not in asset
 
 
 def test_the_tab_strip_does_not_scroll_itself() -> None:
@@ -492,18 +448,16 @@ def test_glanceable_times_are_relative_and_keep_the_exact_stamp() -> None:
     assert "this._formatDate(" not in activity
     # the precise time stays one hover away rather than being thrown away
     assert "sub.title = this._formatDate(wheel.last_activity)" in asset
-    assert "metaNode.title = this._formatDate(wheel.last_activity)" in asset
+    assert "copy.title = this._formatDate(wheel.last_activity)" in asset
     assert "this._formatDate(wheel.last_activity)" in diagnostics
 
 
-def test_channel_detail_navigates_by_the_wheels_three_physical_positions() -> None:
-    """The spine mirrors the hardware the user is holding.
-
-    The wheel has three physical selector positions, so the detail navigates by
-    them and opens one at a time. Comparing every channel of every wheel is the
-    overview's job — that is why the grid is the landing layer.
-    """
+def test_every_channel_is_its_own_card_on_one_page() -> None:
+    """Nothing to navigate, so no spine and no paragraph explaining one."""
     asset = _asset()
+    stacked = asset.split("  _stackedControls(wheel) {", 1)[1].split(
+        "  _channelsView(wheel) {", 1
+    )[0]
     view = asset.split("  _channelsView(wheel) {", 1)[1].split(
         "  _gestureLabel(activity) {", 1
     )[0]
@@ -511,20 +465,21 @@ def test_channel_detail_navigates_by_the_wheels_three_physical_positions() -> No
         "  _isNoAction(action) {", 1
     )[0]
 
-    assert 'el("div", "channel-workbench")' in view
-    assert 'el("div", "channel-spine")' in view
+    assert 'el("section", "control-card")' in stacked
+    assert "for (const control of this._controlsFor(wheel))" in stacked
+    assert "this._stackedControls(wheel)" in view
     assert 'el("ul", "channel-action-list")' in channel
     assert 'el("li", "channel-action")' in channel
-    # the old equal-weight three-column grid is gone
-    assert 'el("div", "channel-grid")' not in asset
-    assert "grid-template-columns: repeat(3, minmax(0, 1fr));" not in asset
-
-    # The spine is a switcher, so it owes the same keyboard contract as the tabs.
-    assert 'spine.setAttribute("role", "tablist")' in view
-    assert 'spine.setAttribute("aria-orientation", "vertical")' in view
-    assert 'dot.setAttribute("role", "tab")' in view
-    for key in ("ArrowDown", "ArrowUp", "Home", "End"):
-        assert f"{key}:" in view
+    for gone in (
+        "channel-spine",
+        "channel-workbench",
+        "channel-position",
+        "_openChannelAt",
+    ):
+        assert gone not in asset
+    # A switched-off channel says so on its card.
+    assert 'card.dataset.state = "off"' in stacked
+    assert '"channel_off_note"' in stacked
 
 
 def test_an_unconfigured_channel_stays_lighter_than_a_configured_one() -> None:
@@ -582,13 +537,8 @@ def test_dual_button_reuses_the_panel_shell_with_two_button_controls() -> None:
         "  _channelDetail(wheel, channel) {", 1
     )[0]
 
-    assert 'el("div", "detail-shell")' in asset
-    assert 'el("div", "channel-workbench")' in buttons
-    assert 'el("div", "channel-spine")' in buttons
-    assert 'el("div", "channel-surface")' in buttons
-    assert "buttons.forEach((button, index) => {" in buttons
-    assert "this._openButtonAt(button.button)" in buttons
-    assert "this._channelDetail(wheel, open)" in buttons
+    assert "this._stackedControls(wheel)" in buttons
+    assert "_openButtonAt" not in asset
     assert '"button-list"' not in asset
     assert '"button-surface"' not in asset
     assert '["buttons", "live", "diagnostics"]' in views
@@ -831,13 +781,14 @@ def test_binding_editor_uses_revision_checked_websocket_mutations() -> None:
 
 
 def test_panel_detail_has_a_back_path_at_every_width() -> None:
-    """The rail may disappear on mobile; the back control may not."""
+    """The way back lives in the bar, so it exists on a phone and a desktop alike."""
     asset = _asset()
+    header = asset.split("  _header() {", 1)[1].split("  _summaryItem(", 1)[0]
 
-    assert 'back.id = "back-to-overview"' in asset
-    assert 'back.type = "button"' in asset
-    assert "back.appendChild(svg(ICON.back))" in asset
-    assert "this._backToOverview()" in asset
+    assert 'back.type = "button"' in header
+    assert 'back.setAttribute("aria-label", this._t("back"))' in header
+    # Nothing hides the bar's back arrow at any width.
+    assert "#header-back { display: none" not in asset
 
 
 def test_panel_preserves_focus_across_live_renders() -> None:

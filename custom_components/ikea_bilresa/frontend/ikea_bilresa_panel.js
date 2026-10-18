@@ -1,11 +1,11 @@
 /**
  * BILRESA panel — device overview, live activity and binding editor.
  *
- * The layout follows PANEL_DESIGN.md's two-layer model: the landing view is a
- * grid of every wheel, while an opened wheel gets a measured 256px switcher rail
- * plus Channels, Live test and Diagnostics views. The rail disappears below
- * 620px and the detail's two-column content collapses on its own 700px pane
- * width, not on the window width.
+ * The landing view is a grid of every wheel. An opened wheel is a Home
+ * Assistant subpage: the header carries a back arrow and the device's name, and
+ * the page shows Channels (one card per channel or button), Live test and
+ * Diagnostics. Two-column content collapses on the width of its own card or
+ * page (container queries), not on the window width.
  *
  * This file deliberately stays dependency-free. It uses Home Assistant tokens,
  * authenticated WebSocket commands and textContent only. Binding mutations are
@@ -86,6 +86,7 @@ const ICON = {
   alert:
     "M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z",
   arrowUp: "M13,20H11V8L5.5,13.5L4.08,12.08L12,4.16L19.92,12.08L18.5,13.5L13,8V20Z",
+  plus: "M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z",
   arrowDown:
     "M11,4H13V16L18.5,10.5L19.92,11.92L12,19.84L4.08,11.92L5.5,10.5L11,16V4Z",
   remove:
@@ -215,7 +216,6 @@ const STYLES = `
     --_font: var(--ha-font-family-body, Roboto, Noto, sans-serif);
     --_fast: var(--ha-animation-duration-fast, 120ms);
     --_ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-    --_rail-width: 256px;
     --_overview-max: 1120px;
     /* The detail needs the same ceiling as the overview. Without it a 1650px
        window drags a fact's label and value ~600px apart. */
@@ -313,9 +313,6 @@ const STYLES = `
       max(var(--_space-6), env(safe-area-inset-left, 0px))
       max(var(--_space-6), env(safe-area-inset-right, 0px));
   }
-  /* The detail's rail is a wall flush with the viewport edge, so the page frame
-     moves inside it, onto .detail-pane. */
-  main[data-view="detail"] { padding: 0; }
   @media (max-width: 600px) {
     main {
       padding-inline:
@@ -409,8 +406,6 @@ const STYLES = `
     padding: var(--_space-5) var(--_space-6);
   }
   .wheel-names { flex: 1 1 auto; min-inline-size: 0; }
-  /* The device glyph. --state-icon-color is HA's own entity-icon colour and
-     clears the 3:1 non-text bar; an icon may carry it where a word may not. */
   /* The BILRESA glyph draws with currentColor (outline + dots), so it is
      coloured via the color property, not fill. */
   .device-glyph {
@@ -420,22 +415,7 @@ const STYLES = `
     color: var(--_accent);
     fill: currentColor;
   }
-  /* Home Assistant's own sidebar marks its active entry with an accent icon and
-     heavier text, not with a tint alone: the selected tint measures only
-     1.22:1 against the rail in both default themes, so on its own it is a
-     colour-only signal too faint to carry the state. The glyph may take the
-     accent where a word may not — it is non-text, and clears the 3:1 bar. */
-  .rail-glyph {
-    flex: 0 0 auto;
-    inline-size: 26px;
-    block-size: 26px;
-    color: var(--_ink-dim);
-    fill: currentColor;
-    transition: color var(--_fast) var(--_ease-out);
-  }
-  .rail-wheel[aria-current="page"] .rail-glyph { color: var(--_accent); }
-  .device-glyph .secondary-path,
-  .rail-glyph .secondary-path { opacity: 0.32; }
+  .device-glyph .secondary-path { opacity: 0.32; }
   .wheel-name {
     display: block;
     min-inline-size: 0;
@@ -531,103 +511,11 @@ const STYLES = `
   }
   .channel-warn { fill: var(--error-color, var(--_ink)); }
 
-  .detail-shell {
-    display: grid;
-    grid-template-columns: var(--_rail-width) minmax(0, 1fr);
-    align-items: start;
-  }
-  /* The rail is a wall of the page, not a card floating on it: one hairline
-     against the content, no radius, flush with the header. */
-  .rail {
-    position: sticky;
-    inset-block-start: var(--_top);
-    block-size: calc(100dvh - var(--_top) - var(--_frame-end));
-    overflow: auto;
-    padding: var(--_space-4) var(--_space-3)
-      max(var(--_space-4), env(safe-area-inset-bottom, 0px));
-    border-inline-end: 1px solid var(--_divider);
-    background: var(--_card);
-  }
-  .rail-back {
-    inline-size: fit-content;
-    min-block-size: 44px;
-    display: inline-flex;
-    align-items: center;
-    gap: var(--_space-2);
-    padding-inline: var(--_space-2);
-    border: 0;
-    border-radius: var(--ha-border-radius-md, 8px);
-    background: transparent;
-    color: var(--_ink);
-    text-align: start;
-    font-size: var(--ha-font-size-m, 14px);
-    font-weight: var(--ha-font-weight-medium, 500);
-    cursor: pointer;
-  }
-  .rail-back svg {
-    inline-size: 20px;
-    block-size: 20px;
-    fill: currentColor;
-  }
-  .rail ul {
-    margin: var(--_space-6) 0 0;
-    padding: 0;
-    list-style: none;
-  }
-  .rail li + li { margin-block-start: var(--_space-1); }
-  /* Exactly three columns for exactly three children. The old rule declared
-     three and rendered four, so the dot took the 1fr track, the name was pushed
-     flush right, and the tick wrapped onto a second row. */
-  .rail-wheel {
-    inline-size: 100%;
-    min-block-size: 56px;
-    display: grid;
-    grid-template-columns: 26px minmax(0, 1fr) 8px;
-    align-items: center;
-    gap: var(--_space-3);
-    padding: var(--_space-2) var(--_space-3);
-    border: 0;
-    border-radius: var(--ha-border-radius-md, 8px);
-    background: transparent;
-    color: var(--_ink);
-    text-align: start;
-    cursor: pointer;
-    transition: background-color var(--_fast) var(--_ease-out);
-  }
-  .rail-wheel[aria-current="page"] {
-    background: var(--_selected);
-  }
-  .rail-copy { min-inline-size: 0; }
-  .rail-name,
-  .rail-area {
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .rail-name {
-    font-size: var(--ha-font-size-m, 14px);
-    font-weight: var(--ha-font-weight-normal, 400);
-  }
-  .rail-wheel[aria-current="page"] .rail-name {
-    font-weight: var(--ha-font-weight-medium, 500);
-  }
-  .rail-area {
-    margin-block-start: 1px;
-    color: var(--_ink-dim);
-    font-size: var(--ha-font-size-s, 12px);
-    font-weight: var(--ha-font-weight-normal, 400);
-  }
-  .rail-wheel[aria-current="page"] .rail-area { color: var(--_ink); }
 
-  .detail-pane {
-    min-inline-size: 0;
-    container-type: inline-size;
-    padding: var(--_space-6) var(--_space-8)
-      max(var(--_space-10), env(safe-area-inset-bottom, 0px)) var(--_space-6);
-  }
   .detail-inner { inline-size: min(100%, var(--_detail-max)); }
-  .detail-inner.subpage { margin-inline: auto; }
+  /* The container the live test and diagnostics measure; each channel card is
+     its own, nearer container. */
+  .detail-inner.subpage { margin-inline: auto; container-type: inline-size; }
   .subpage-meta {
     display: flex;
     align-items: center;
@@ -655,49 +543,12 @@ const STYLES = `
     box-shadow: var(--ha-card-box-shadow, none);
   }
   .control-card .channel-empty { min-block-size: 0; }
-  .detail-top {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--_space-4);
-    margin-block-end: var(--_space-2);
-  }
-  .back-button {
-    display: none;
-    min-block-size: 44px;
-    align-items: center;
-    gap: var(--_space-2);
-    padding-inline: var(--_space-3);
-    border: 0;
-    border-radius: var(--ha-border-radius-md, 8px);
-    background: transparent;
-    color: var(--_ink);
-    font-size: var(--ha-font-size-m, 14px);
-    cursor: pointer;
-  }
-  .back-button:hover { background: color-mix(in srgb, var(--_ink) 6%, transparent); }
-  .back-button svg { inline-size: 20px; block-size: 20px; fill: currentColor; }
-  .detail-glyph {
-    flex: 0 0 auto;
-    inline-size: 48px;
-    block-size: 48px;
-    color: var(--_accent);
-    fill: currentColor;
-  }
-  .detail-heading { min-inline-size: 0; flex: 1; }
-  .detail-heading h2 {
-    margin: 0;
-    overflow-wrap: anywhere;
-    font-size: var(--ha-font-size-3xl, 30px);
-    font-weight: var(--ha-font-weight-normal, 400);
-    line-height: var(--ha-line-height-condensed, 1.2);
-  }
   .detail-meta {
     margin-block-start: var(--_space-2);
     color: var(--_ink-dim);
     font-size: var(--ha-font-size-m, 14px);
   }
   .detail-meta-part + .detail-meta-part::before { content: " · "; }
-  .detail-top .status { align-self: center; }
 
   /* overflow-x: auto keeps a long translation from pushing the page sideways,
      but it costs more than it looks: the moment one axis is not visible, the
@@ -758,75 +609,9 @@ const STYLES = `
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--_space-4);
   }
-  /* Physical controls navigate the workbench: three positions for a wheel or
-     two buttons for a dual button, one open at a time. The overview compares
-     devices; the detail keeps the established spine-and-surface composition. */
-  .channel-workbench {
-    min-inline-size: 0;
-    display: grid;
-    grid-template-columns: 86px minmax(0, 1fr);
-    overflow: hidden;
-    border: var(--ha-card-border-width, 1px) solid var(--_border);
-    border-radius: var(--_radius);
-    background: var(--_card);
-    box-shadow: var(--ha-card-box-shadow, none);
-  }
-  .channel-spine {
-    position: relative;
-    display: grid;
-    align-content: start;
-    gap: var(--_space-8);
-    padding: var(--_space-8) var(--_space-3);
-    border-inline-end: 1px solid var(--_divider);
-    background: var(--_surface-subtle);
-  }
-  .channel-spine::before {
-    content: "";
-    position: absolute;
-    inset-block: 58px;
-    inset-inline-start: 50%;
-    inline-size: 1px;
-    background: var(--_divider);
-    transform: translateX(-50%);
-  }
-  .channel-position {
-    position: relative;
-    z-index: 1;
-    inline-size: 54px;
-    block-size: 54px;
-    display: grid;
-    place-items: center;
-    justify-self: center;
-    border: 1px solid var(--_border);
-    border-radius: 50%;
-    background: var(--_card);
-    color: var(--_ink-dim);
-    font: inherit;
-    font-size: var(--ha-font-size-l, 16px);
-    font-weight: var(--ha-font-weight-medium, 500);
-    font-variant-numeric: tabular-nums;
-    cursor: pointer;
-    transition:
-      background-color var(--_fast) var(--_ease-out),
-      border-color var(--_fast) var(--_ease-out),
-      color var(--_fast) var(--_ease-out);
-  }
-  .channel-position[aria-selected="true"] {
-    border-color: var(--_accent);
-    background: var(--_accent);
-    color: var(--text-primary-color, #fff);
-  }
-  .channel-position:active { transform: translateY(1px); }
-  /* Struck through rather than merely dimmed: dimming reads as "unconfigured",
-     which this is not — it is a position that has been switched off. */
-  .channel-position-off {
-    opacity: 0.55;
-    text-decoration: line-through;
-  }
 
-  /* A sibling card to the workbench, not a form floating on the page
-     background. Same tokens as .channel-workbench so the two read as one
-     surface; PANEL_DESIGN.md forbids nesting one inside the other. */
+  /* A sibling card to the channel cards, not a form floating on the page
+     background, and never nested inside one (PANEL_DESIGN.md). */
   .settings-section {
     margin-block-start: var(--_space-4);
     padding: var(--_space-6);
@@ -889,10 +674,6 @@ const STYLES = `
   .settings-message {
     color: var(--_ink-dim);
     font-size: var(--ha-font-size-m, 14px);
-  }
-  .channel-surface {
-    min-inline-size: 0;
-    padding: var(--_space-8);
   }
   .channel-detail-head {
     display: flex;
@@ -1000,16 +781,38 @@ const STYLES = `
     padding: 0;
     border: 0;
     background: none;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--_space-2);
+    padding-inline: var(--_space-2) var(--_space-3);
+    border-radius: var(--ha-border-radius-md, 8px);
     /* Ink, not the theme's primary colour: the default light blue is 2.6:1 on
-       a white card. The underline is what says "this is the way in". */
+       a white card. The plus is what says "this adds something". */
     color: var(--_ink);
     font-size: var(--ha-font-size-m, 14px);
     font-weight: var(--ha-font-weight-medium, 500);
     text-align: start;
-    text-decoration: underline;
-    text-underline-offset: 3px;
     cursor: pointer;
   }
+  .channel-action-add svg {
+    flex: 0 0 auto;
+    inline-size: 20px;
+    block-size: 20px;
+    fill: currentColor;
+  }
+  @media (hover: hover) {
+    .channel-action-add:hover { background: var(--_selected); }
+  }
+  .control-off-note {
+    margin: 0 0 var(--_space-4);
+    color: var(--_ink-dim);
+    font-size: var(--ha-font-size-m, 14px);
+  }
+  .control-off-note strong {
+    color: var(--_ink);
+    font-weight: var(--ha-font-weight-medium, 500);
+  }
+  .control-card[data-state="off"] .channel-detail { opacity: 0.72; }
   .channel-action[data-state="warning"] .channel-action-value {
     color: var(--error-color, var(--_ink));
   }
@@ -1507,32 +1310,14 @@ const STYLES = `
     opacity: 0.5;
   }
 
-  /* These measure the detail pane, not the window: with the rail present the
-     pane is ~256px narrower, and a window-width breakpoint keeps two columns in
-     a pane far too narrow for them. */
+  /* These measure the card or page they sit in, not the window: a channel
+     card is narrower than the window, and a window-width breakpoint would keep
+     two columns where they no longer fit. */
   @container (max-width: 700px) {
     .diagnostic-grid,
     .live-layout,
     .form-grid { grid-template-columns: minmax(0, 1fr); }
     .field[data-wide="true"] { grid-column: auto; }
-    .channel-workbench { grid-template-columns: minmax(0, 1fr); }
-    .channel-spine {
-      grid-auto-flow: column;
-      grid-auto-columns: minmax(0, 1fr);
-      gap: var(--_space-3);
-      padding: var(--_space-4);
-      border-inline-end: 0;
-      border-block-end: 1px solid var(--_divider);
-    }
-    .channel-spine::before {
-      inset-block: auto;
-      inset-block-start: 50%;
-      inset-inline: 44px;
-      inline-size: auto;
-      block-size: 1px;
-      transform: translateY(-50%);
-    }
-    .channel-surface { padding: var(--_space-6) var(--_space-4); }
     .channel-detail-head { display: grid; }
     .channel-action {
       grid-template-columns: minmax(0, 1fr);
@@ -1547,22 +1332,8 @@ const STYLES = `
   }
 
   @media (max-width: 619px) {
-    .detail-shell { grid-template-columns: minmax(0, 1fr); }
-    .rail { display: none; }
-    .detail-pane {
-      padding: var(--_space-5) var(--_space-4)
-        max(var(--_space-8), env(safe-area-inset-bottom, 0px));
-    }
-    .back-button { display: inline-flex; margin-block-end: var(--_space-4); }
-    .detail-top { flex-wrap: wrap; gap: var(--_space-2) var(--_space-3); }
-    .detail-glyph { inline-size: 40px; block-size: 40px; }
     .detail-meta-part { display: block; }
     .detail-meta-part + .detail-meta-part::before { content: none; }
-    .detail-top .status {
-      flex: 0 0 100%;
-      padding-inline-start: calc(40px + var(--_space-3));
-    }
-    .detail-heading h2 { font-size: var(--ha-font-size-2xl, 24px); }
     .wheel-head { padding-inline: var(--_space-4); }
     .channel { padding-inline: var(--_space-4); }
     .live-output {
@@ -1661,8 +1432,6 @@ class IkeaBilresaPanel extends HTMLElement {
     this._unsub = null;
     this._started = false;
     this._open = null;
-    this._openChannel = 1;
-    this._openButton = 1;
     this._view = "channels";
     this._activities = [];
     this._activityUnsub = null;
@@ -1675,8 +1444,8 @@ class IkeaBilresaPanel extends HTMLElement {
     this._editorBinding = null;
     this._editorErrors = {};
     this._editorBusy = false;
-    // Per-wheel settings draft, keyed by wheel so switching wheels in the rail
-    // cannot carry one wheel's unsaved edits onto another.
+    // Per-wheel settings draft, keyed by wheel so opening another wheel cannot
+    // carry one wheel's unsaved edits onto another.
     this._settingsDraft = null;
     this._settingsDraftKey = null;
     this._settingsBusy = false;
@@ -1924,8 +1693,6 @@ class IkeaBilresaPanel extends HTMLElement {
   _openWheel(key) {
     if (key !== this._open) {
       this._activities = [];
-      this._openChannel = 1;
-      this._openButton = 1;
       this._closeEditor();
     }
     const device = this._snapshot?.wheels.find((item) => item.key === key);
@@ -1938,32 +1705,10 @@ class IkeaBilresaPanel extends HTMLElement {
     this._render();
   }
 
-  _openChannelAt(channel) {
-    if (channel === this._openChannel) return;
-    this._openChannel = channel;
-    this._closeEditor();
-    this._render();
-    this.shadowRoot
-      ?.getElementById(`spine-${this._open}-${channel}`)
-      ?.focus({ preventScroll: true });
-  }
-
-  _openButtonAt(button) {
-    if (button === this._openButton) return;
-    this._openButton = button;
-    this._closeEditor();
-    this._render();
-    this.shadowRoot
-      ?.getElementById(`button-${this._open}-${button}`)
-      ?.focus({ preventScroll: true });
-  }
-
   _backToOverview() {
     this._stopActivity();
     this._view = "channels";
     this._open = null;
-    this._openChannel = 1;
-    this._openButton = 1;
     this._activities = [];
     this._closeEditor();
     this._render();
@@ -1990,14 +1735,6 @@ class IkeaBilresaPanel extends HTMLElement {
       (control.profile !== null && control.profile !== undefined);
   }
 
-  // Two layouts are under comparison for 0.6.1 (PANEL_POLISH_PLAN.md, 0.6.1).
-  // "subpage" is a Home Assistant subpage: a back arrow and the device name in
-  // the header, no second sidebar, every channel on one page. "classic" keeps
-  // the rail and the channel spine. Only the preview selects "subpage" for now.
-  _layout() {
-    return this._panel?.config?.layout === "subpage" ? "subpage" : "classic";
-  }
-
   _openDevice() {
     if (!this._open || !this._snapshot) return null;
     return this._snapshot.wheels.find((item) => item.key === this._open) || null;
@@ -2009,7 +1746,7 @@ class IkeaBilresaPanel extends HTMLElement {
 
   _header() {
     const bar = el("header");
-    const device = this._layout() === "subpage" ? this._openDevice() : null;
+    const device = this._openDevice();
     if (device) {
       // A Home Assistant subpage: the way back sits where the menu button would,
       // and the bar names the page. No second "back" anywhere below.
@@ -2237,88 +1974,11 @@ class IkeaBilresaPanel extends HTMLElement {
     }).format(date);
   }
 
-  _rail() {
-    const aside = el("aside", "rail");
-    const nav = el("nav");
-    nav.setAttribute("aria-label", this._t("wheel_switcher"));
-    const back = el("button", "rail-back");
-    back.type = "button";
-    back.appendChild(svg(ICON.back));
-    back.appendChild(el("span", null, this._t("back")));
-    back.addEventListener("click", () => this._backToOverview());
-    nav.appendChild(back);
-    const list = el("ul");
-    for (const wheel of this._snapshot.wheels) {
-      const item = el("li");
-      const button = el("button", "rail-wheel");
-      button.type = "button";
-      if (wheel.key === this._open) button.setAttribute("aria-current", "page");
-      button.setAttribute(
-        "aria-label",
-        [
-          wheel.name,
-          wheel.area || this._t("detail_area_none"),
-          this._t(wheel.availability),
-        ].join(", "),
-      );
-      // Exactly three children for the rail's three columns. The tick that used
-      // to trail the open wheel was a fourth, so it wrapped to its own row — and
-      // it was redundant anyway: the tinted surface already says "open".
-      button.appendChild(deviceIcon(wheel, "rail-glyph"));
-      const copy = el("span", "rail-copy");
-      copy.appendChild(el("span", "rail-name", wheel.name));
-      copy.appendChild(
-        el("span", "rail-area", wheel.area || this._t("detail_area_none")),
-      );
-      button.appendChild(copy);
-      button.appendChild(this._statusDot(wheel.availability));
-      button.addEventListener("click", () => this._openWheel(wheel.key));
-      item.appendChild(button);
-      list.appendChild(item);
-    }
-    nav.appendChild(list);
-    aside.appendChild(nav);
-    return aside;
-  }
-
   _statusDot(state) {
     const dot = el("span", "dot");
     dot.dataset.state = state;
     dot.setAttribute("aria-hidden", "true");
     return dot;
-  }
-
-  _detailTop(wheel) {
-    const top = el("div", "detail-top");
-    top.appendChild(deviceIcon(wheel, "detail-glyph"));
-
-    const heading = el("div", "detail-heading");
-    heading.appendChild(el("h2", null, wheel.name));
-    const meta = [
-      wheel.area || this._t("detail_area_none"),
-      this._activityLabel(wheel),
-    ].filter(Boolean);
-    // Separate parts, so a phone puts the room and the activity on a line each
-    // by design instead of breaking one long line wherever it happens to fit.
-    const metaNode = el("div", "detail-meta");
-    for (const part of meta) metaNode.appendChild(el("span", "detail-meta-part", part));
-    if (wheel.last_activity) metaNode.title = this._formatDate(wheel.last_activity);
-    heading.appendChild(metaNode);
-    top.appendChild(heading);
-    if (wheel.availability !== "connected") {
-      top.appendChild(this._status(wheel.availability));
-    }
-    return top;
-  }
-
-  _mobileBack() {
-    const back = el("button", "back-button");
-    back.id = "back-to-overview";
-    back.type = "button";
-    back.appendChild(svg(ICON.back));
-    back.appendChild(el("span", null, this._t("back")));
-    back.addEventListener("click", () => this._backToOverview());
-    return back;
   }
 
   _tabs(wheel) {
@@ -3284,6 +2944,7 @@ class IkeaBilresaPanel extends HTMLElement {
           }),
         );
         add.type = "button";
+        add.prepend(svg(ICON.plus));
         add.addEventListener("click", () => this._startEditor(wheel, channel));
         item.appendChild(add);
         actions.appendChild(item);
@@ -3547,12 +3208,23 @@ class IkeaBilresaPanel extends HTMLElement {
     return section;
   }
 
-  // Subpage layout: every channel or button is its own card, in order, on
-  // one page. Nothing to navigate, so nothing to explain.
+  // Every channel or button is its own card, in order, on one page: the way
+  // Home Assistant's own device pages and settings panels are built. There is
+  // nothing to navigate, so nothing to explain.
   _stackedControls(wheel) {
     const stack = el("div", "control-stack");
     for (const control of this._controlsFor(wheel)) {
       const card = el("section", "control-card");
+      card.id = `control-${wheel.key}-${this._controlNumber(wheel, control)}`;
+      if (control.enabled === false) {
+        // A switched-off channel keeps its binding but runs nothing; the card
+        // says so before anything else on it.
+        card.dataset.state = "off";
+        const note = el("p", "control-off-note");
+        note.appendChild(el("strong", null, this._t("settings_disabled_badge")));
+        note.appendChild(el("span", null, ` · ${this._t("channel_off_note")}`));
+        card.appendChild(note);
+      }
       card.appendChild(this._channelDetail(wheel, control));
       stack.appendChild(card);
     }
@@ -3561,81 +3233,7 @@ class IkeaBilresaPanel extends HTMLElement {
 
   _channelsView(wheel) {
     const wrap = el("div");
-    if (this._layout() === "subpage") {
-      wrap.appendChild(this._stackedControls(wheel));
-      wrap.appendChild(this._activeChannelsSection(wheel));
-      wrap.appendChild(this._dialSection(wheel));
-      return wrap;
-    }
-
-    const open =
-      wheel.channels.find((item) => item.channel === this._openChannel) ||
-      wheel.channels[0];
-    if (!open) return wrap;
-
-    const workbench = el("div", "channel-workbench");
-    // The wheel's three selector positions ARE the navigation: the spine mirrors
-    // the hardware, so picking a position on screen is the same act as clicking
-    // one in the hand. Every channel of every wheel is compared on the overview;
-    // the detail is a workbench for one.
-    const spine = el("div", "channel-spine");
-    spine.setAttribute("role", "tablist");
-    spine.setAttribute("aria-orientation", "vertical");
-    spine.setAttribute("aria-label", this._t("channel_spine"));
-    wheel.channels.forEach((channel, index) => {
-      const dot = el(
-        "button",
-        "channel-position",
-        String(channel.channel),
-      );
-      dot.type = "button";
-      dot.id = `spine-${wheel.key}-${channel.channel}`;
-      dot.setAttribute("role", "tab");
-      dot.setAttribute("aria-selected", String(channel.channel === open.channel));
-      dot.setAttribute("aria-controls", `channel-${wheel.key}-${channel.channel}`);
-      dot.tabIndex = channel.channel === open.channel ? 0 : -1;
-      const configured =
-        channel.profile !== null && channel.profile !== undefined;
-      // A disabled channel reads as disabled before anything else: whatever
-      // binding it still holds is not going to run.
-      if (channel.enabled === false) dot.classList.add("channel-position-off");
-      dot.setAttribute(
-        "aria-label",
-        `${this._t("channel_title", { channel: channel.channel })}: ${
-          channel.enabled === false
-            ? this._t("settings_disabled_badge")
-            : configured
-              ? channel.behaviour || channel.profile
-              : this._t("not_configured")
-        }`,
-      );
-      dot.addEventListener("click", () => this._openChannelAt(channel.channel));
-      dot.addEventListener("keydown", (event) => {
-        const keys = {
-          ArrowDown: (index + 1) % wheel.channels.length,
-          ArrowRight: (index + 1) % wheel.channels.length,
-          ArrowUp: (index - 1 + wheel.channels.length) % wheel.channels.length,
-          ArrowLeft: (index - 1 + wheel.channels.length) % wheel.channels.length,
-          Home: 0,
-          End: wheel.channels.length - 1,
-        };
-        const next = keys[event.key];
-        if (next === undefined) return;
-        event.preventDefault();
-        spine.querySelectorAll('[role="tab"]')[next]?.focus();
-      });
-      spine.appendChild(dot);
-    });
-    workbench.appendChild(spine);
-
-    const surface = el("div", "channel-surface");
-    surface.id = `channel-${wheel.key}-${open.channel}`;
-    surface.setAttribute("role", "tabpanel");
-    surface.setAttribute("aria-labelledby", `spine-${wheel.key}-${open.channel}`);
-    surface.appendChild(this._channelDetail(wheel, open));
-    workbench.appendChild(surface);
-
-    wrap.appendChild(workbench);
+    wrap.appendChild(this._stackedControls(wheel));
     wrap.appendChild(this._activeChannelsSection(wheel));
     wrap.appendChild(this._dialSection(wheel));
     return wrap;
@@ -3643,74 +3241,7 @@ class IkeaBilresaPanel extends HTMLElement {
 
   _buttonsView(wheel) {
     const wrap = el("div");
-    if (this._layout() === "subpage") {
-      wrap.appendChild(this._stackedControls(wheel));
-      return wrap;
-    }
-
-    const buttons = wheel.buttons || [];
-    const open =
-      buttons.find((item) => item.button === this._openButton) || buttons[0];
-    if (!open) return wrap;
-
-    const workbench = el("div", "channel-workbench");
-    const spine = el("div", "channel-spine");
-    spine.setAttribute("role", "tablist");
-    spine.setAttribute("aria-orientation", "vertical");
-    spine.setAttribute("aria-label", this._t("button_spine"));
-    buttons.forEach((button, index) => {
-      const position = el("button", "channel-position", String(button.button));
-      position.type = "button";
-      position.id = `button-${wheel.key}-${button.button}`;
-      position.setAttribute("role", "tab");
-      position.setAttribute(
-        "aria-selected",
-        String(button.button === open.button),
-      );
-      position.setAttribute(
-        "aria-controls",
-        `button-panel-${wheel.key}-${button.button}`,
-      );
-      position.tabIndex = button.button === open.button ? 0 : -1;
-      position.setAttribute(
-        "aria-label",
-        `${this._t("button_title", { button: button.button })}: ${
-          this._isConfigured(button)
-            ? button.behaviour || this._t("configured")
-            : this._t("not_configured")
-        }`,
-      );
-      position.addEventListener("click", () =>
-        this._openButtonAt(button.button),
-      );
-      position.addEventListener("keydown", (event) => {
-        const keys = {
-          ArrowDown: (index + 1) % buttons.length,
-          ArrowRight: (index + 1) % buttons.length,
-          ArrowUp: (index - 1 + buttons.length) % buttons.length,
-          ArrowLeft: (index - 1 + buttons.length) % buttons.length,
-          Home: 0,
-          End: buttons.length - 1,
-        };
-        const next = keys[event.key];
-        if (next === undefined) return;
-        event.preventDefault();
-        spine.querySelectorAll('[role="tab"]')[next]?.focus();
-      });
-      spine.appendChild(position);
-    });
-    workbench.appendChild(spine);
-
-    const surface = el("div", "channel-surface");
-    surface.id = `button-panel-${wheel.key}-${open.button}`;
-    surface.setAttribute("role", "tabpanel");
-    surface.setAttribute(
-      "aria-labelledby",
-      `button-${wheel.key}-${open.button}`,
-    );
-    surface.appendChild(this._channelDetail(wheel, open));
-    workbench.appendChild(surface);
-    wrap.appendChild(workbench);
+    wrap.appendChild(this._stackedControls(wheel));
     return wrap;
   }
 
@@ -3906,9 +3437,11 @@ class IkeaBilresaPanel extends HTMLElement {
     this._stopActivity();
     this._activityError = false;
     this._view = wheel.variant === "dual_button" ? "buttons" : "channels";
-    if (wheel.variant === "dual_button") this._openButton = number;
-    else this._openChannel = number;
     this._startEditor(wheel, control);
+    // Every control is on the page; bring the one being configured into view.
+    this.shadowRoot
+      ?.getElementById(`control-${wheel.key}-${number}`)
+      ?.scrollIntoView?.({ block: "start" });
   }
 
   async _testBinding(wheel, control, gesture, extra = {}) {
@@ -4356,8 +3889,8 @@ class IkeaBilresaPanel extends HTMLElement {
     return panel;
   }
 
-  // Subpage layout: the header carries the way back and the name, so the
-  // page starts with what the device is doing and the views.
+  // The header carries the way back and the name, so the page starts with
+  // what the device is doing and the views.
   _subpageDetail(wheel) {
     const inner = el("div", "detail-inner subpage");
     if (!this._snapshot.matter_connected) {
@@ -4386,24 +3919,7 @@ class IkeaBilresaPanel extends HTMLElement {
   }
 
   _detail(wheel) {
-    if (this._layout() === "subpage") return this._subpageDetail(wheel);
-    const shell = el("div", "detail-shell");
-    shell.appendChild(this._rail());
-
-    const pane = el("div", "detail-pane");
-    const inner = el("div", "detail-inner");
-    if (!this._snapshot.matter_connected) {
-      inner.appendChild(this._banner(this._t("banner_matter_offline")));
-    } else if (this._error) {
-      inner.appendChild(this._banner(this._t("banner_updates_stopped")));
-    }
-    inner.appendChild(this._mobileBack());
-    inner.appendChild(this._detailTop(wheel));
-    inner.appendChild(this._tabs(wheel));
-    inner.appendChild(this._detailPanel(wheel));
-    pane.appendChild(inner);
-    shell.appendChild(pane);
-    return shell;
+    return this._subpageDetail(wheel);
   }
 
   _missingWheel() {
@@ -4515,11 +4031,6 @@ class IkeaBilresaPanel extends HTMLElement {
     const style = document.createElement("style");
     style.textContent = STYLES;
     const main = el("main");
-    // The detail's rail runs to the viewport edge, so the page frame lives on
-    // .detail-pane instead of here.
-    if (this._open && this._snapshot && this._layout() === "classic") {
-      main.dataset.view = "detail";
-    }
     main.appendChild(this._body());
     this.shadowRoot.replaceChildren(style, this._header(), main);
     if (focused) this.shadowRoot.getElementById(focused)?.focus({ preventScroll: true });

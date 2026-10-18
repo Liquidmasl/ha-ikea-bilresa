@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning 2.0.0](https://semver.org/spec/
 
 ## [Unreleased]
 
+### Changed
+- **An opened wheel or dual button is now a Home Assistant subpage.** The
+  header shows a back arrow and the device's name, the second sidebar listing
+  every BILRESA device is gone, and every channel or button is its own card on
+  one page instead of being picked from the 1 / 2 / 3 circles. This is how
+  HACS, the KNX panel and Home Assistant's own device pages are built.
+- Overview rows lead with the target ("Kitchen counter") instead of the mode,
+  which was the same on every row.
+- "Connected" is shown only when a device is not connected; the overview's
+  title and "N connected" line are gone.
+- A switched-off channel says so on its card.
+- "Add an action" is a button with a plus instead of underlined text.
+
 ## [0.6.0] - 2026-10-18
 
 The first stable release since 0.5.0. Everything below this section was

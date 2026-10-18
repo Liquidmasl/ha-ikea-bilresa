@@ -10,7 +10,6 @@ Query parameters: ``lang=cs`` (default ``en``), ``dark=1``, ``narrow=1`` (no
 sidebar, phone layout), ``inset=16`` (a theme that pads the panel),
 ``theme=warm`` (a warm custom theme with large radii and a white header, the
 kind the owner runs, instead of Home Assistant's default),
-``layout=subpage`` (the subpage layout under comparison for 0.6.1),
 ``open=<wheel key>`` with ``view=channels|buttons|live|diagnostics``, and
 ``edit=<n>`` to open the editor of channel or button ``n``.
 
@@ -457,7 +456,6 @@ panel.panel = {
   config: {
     labels: LABELS[lang],
     schema: SCHEMA,
-    layout: params.get("layout") || "classic",
   },
 };
 panel.narrow = narrow;

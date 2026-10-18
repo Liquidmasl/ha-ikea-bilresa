@@ -283,6 +283,10 @@ versus "single press" wording, which waits for the owner's decision.
 
 ## 0.6.1 — structure (2026-10-18)
 
+**Decided 2026-10-18: layout A.** The owner chose the subpage layout and asked
+for the room-light profile (discussion #7) in 0.7.0, not 0.6.1. The classic
+layout (rail, spine, mobile back button) was deleted, not kept behind a switch.
+
 A critique on 2026-10-18 found the remaining problem in the structure, not
 the styling: a second sidebar beside Home Assistant's own, a custom channel
 spine that needs a paragraph to explain it, duplicate headings, "Connected"

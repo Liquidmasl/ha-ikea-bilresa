@@ -13,6 +13,15 @@ No panel work should delay the physical release-candidate validation in
 `HARDWARE_TEST.md`. The first implementation must be additive and must not
 change Matter event decoding, binding behavior or stored configuration.
 
+> **Superseded for the device detail on 2026-10-18 (0.6.1).** The owner chose
+> layout A after a critique and a comparison in `tools/panel_preview`: the
+> detail is now a Home Assistant subpage. The header carries a back arrow and
+> the device's name; the 256 px rail, the `1 / 2 / 3` spine and the mobile back
+> button are gone; every channel or button is its own card on one page. The
+> overview layer below is unchanged apart from rows leading with the target.
+> Everything this document says about the rail and the spine is history. See
+> `PANEL_POLISH_PLAN.md`, section "0.6.1 — structure".
+
 ## Selected visual direction
 
 Selected on 2026-07-15 and revised the same day, after a browser prototype

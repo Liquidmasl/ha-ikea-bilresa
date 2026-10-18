@@ -268,7 +268,6 @@ test("live setup opens the matching dual-button editor", () => {
   });
 
   assert.equal(panel._view, "buttons");
-  assert.equal(panel._openButton, 2);
   assert.equal(panel._editingChannel, 2);
   assert.equal(panel._editingKind, "button");
 });
@@ -354,21 +353,6 @@ test("dual-button panel test sends button and no rotary address", async () => {
     presses: 1,
   });
   assert.equal("channel" in message, false);
-});
-
-test("dual button selection changes only the open physical button", () => {
-  const panel = newPanel();
-  panel._openButton = 1;
-  panel._editingChannel = 1;
-  panel._editingKind = "button";
-  panel._editorData = {};
-
-  panel._openButtonAt(2);
-
-  assert.equal(panel._openButton, 2);
-  assert.equal(panel._editingChannel, null);
-  assert.equal(panel._editingKind, null);
-  assert.equal(panel._editorData, null);
 });
 
 test("dual-button editor starts without rotary or triple-press fields", () => {
