@@ -113,24 +113,15 @@ STRINGS: dict[str, dict[str, str]] = {
         ),
         "step_curve_linear": "Linear (default)",
         "step_curve_perceptual": "Perceptual (even to the eye)",
-        "settings_channels_title": "Active channels",
-        "channel_off_note": (
-            "it does nothing until you switch it on under Active channels below."
-        ),
         "settings_channels_saved": "Saved",
-        "settings_dial_title": "Dial",
+        "channel_active": "Active",
+        "channel_off_note": "it does nothing until you switch it back on here.",
         "settings_dial_intro": (
-            "Besides its binding, every channel has a dial in Home Assistant: a "
-            "number entity from 1 to 100 that turning the wheel moves. "
-            "Automations can read it. These two values shape the dial only; a "
-            "binding has its own step and acceleration."
+            "Each channel's number entity (1 to 100): turning the wheel moves it "
+            "and automations can read it. It does not affect the binding."
         ),
+        "settings_dial_title": "Dial",
         "settings_step_help": "In the dial's own units, 1 to 100.",
-        "settings_intro": (
-            "Switch a selector position off and it is ignored entirely — no "
-            "dial, no toggle, no events, nothing. Useful when the selector "
-            "gets flipped by accident."
-        ),
         "settings_channel_enabled": "Channel {channel} active",
         "settings_step": "Dial change per notch",
         "settings_acceleration": "Dial acceleration",
@@ -155,17 +146,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "detail_last_button": "Last active button",
         "detail_no_last_button": "No button observed yet",
         "detail_channels_heading": "Physical position behaviour",
-        "channel_empty_title": "Channel {channel} is waiting for a binding",
-        "channel_empty_body": (
-            "Pick a behaviour and a target. The other two physical positions "
-            "stay unchanged."
-        ),
         "channel_title": "Channel {channel}",
         "channel_binding": "Binding",
-        "button_empty_title": "Button {button} is waiting for a binding",
-        "button_empty_body": (
-            "Choose what a short press, double press and hold should control."
-        ),
         "button_title": "Button {button}",
         "target_none": "No target configured",
         # A wheel's short press falls back to the rotation target when this is
@@ -525,24 +507,15 @@ STRINGS: dict[str, dict[str, str]] = {
         ),
         "step_curve_linear": "Lineární (výchozí)",
         "step_curve_perceptual": "Percepční (rovnoměrné pro oko)",
-        "settings_channels_title": "Aktivní kanály",
-        "channel_off_note": (
-            "nic nedělá, dokud ho nezapnete v části Aktivní kanály níže."
-        ),
         "settings_channels_saved": "Uloženo",
-        "settings_dial_title": "Číselník",
+        "channel_active": "Aktivní",
+        "channel_off_note": "nic nedělá, dokud ho tady znovu nezapnete.",
         "settings_dial_intro": (
-            "Každý kanál má v Home Assistantu vedle propojení i číselník: "
-            "číselnou entitu od 1 do 100, kterou otáčení kolečka mění. Mohou "
-            "ji číst automatizace. Tyto dvě hodnoty se týkají jen číselníku; "
-            "propojení má vlastní krok a zrychlení."
+            "Číselná entita každého kanálu (1 až 100): otáčení ji mění a mohou "
+            "ji číst automatizace. Na propojení nemá vliv."
         ),
+        "settings_dial_title": "Číselník",
         "settings_step_help": "V jednotkách číselníku, 1 až 100.",
-        "settings_intro": (
-            "Vypnutý kanál je zcela ignorován — žádný číselník, žádné "
-            "přepínání, žádné události. Hodí se, když přepínač někdo cvakne "
-            "omylem."
-        ),
         "settings_channel_enabled": "Kanál {channel} aktivní",
         "settings_step": "Změna číselníku na jedno cvaknutí",
         "settings_acceleration": "Zrychlení číselníku",
@@ -569,17 +542,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "detail_last_button": "Naposledy aktivní tlačítko",
         "detail_no_last_button": "Zatím nebylo pozorováno žádné tlačítko",
         "detail_channels_heading": "Chování fyzických poloh",
-        "channel_empty_title": "Kanál {channel} čeká na propojení",
-        "channel_empty_body": (
-            "Zvolte chování a cíl. Ostatní dvě fyzické polohy kolečka zůstanou "
-            "beze změny."
-        ),
         "channel_title": "Kanál {channel}",
         "channel_binding": "Propojení",
-        "button_empty_title": "Tlačítko {button} čeká na propojení",
-        "button_empty_body": (
-            "Zvolte, co má ovládat krátký stisk, dvojitý stisk a podržení."
-        ),
         "button_title": "Tlačítko {button}",
         "target_none": "Není nastaven žádný cíl",
         "target_same_as_rotation": "Stejný jako cíl otáčení",

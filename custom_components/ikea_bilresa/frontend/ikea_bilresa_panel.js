@@ -219,7 +219,7 @@ const STYLES = `
     --_overview-max: 1120px;
     /* The detail needs the same ceiling as the overview. Without it a 1650px
        window drags a fact's label and value ~600px apart. */
-    --_detail-max: 1100px;
+    --_detail-max: 880px;
     /* The icon colour clears the 3:1 non-text bar where a word would not. */
     --_accent: var(--state-icon-color, #44739e);
 
@@ -542,7 +542,24 @@ const STYLES = `
     background: var(--_card);
     box-shadow: var(--ha-card-box-shadow, none);
   }
-  .control-card .channel-empty { min-block-size: 0; }
+  .channel-detail-tools {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--_space-3);
+  }
+  .channel-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--_space-2);
+  }
+  .channel-switch ha-selector { display: block; }
+  .channel-detail[data-state="empty"] .channel-detail-summary { color: var(--_ink-dim); }
+  /* A card with nothing configured is one line high, not a poster. */
+  .channel-detail[data-state="empty"] .channel-detail-head { margin-block-end: 0; }
+  .channel-action:last-child { border-block-end: 0; }
   .detail-meta {
     margin-block-start: var(--_space-2);
     color: var(--_ink-dim);
@@ -659,9 +676,12 @@ const STYLES = `
     outline: 2px solid var(--_accent);
     outline-offset: 2px;
   }
+  /* Stacked and bounded: two sliders side by side stretched across the card
+     read as one long bar each. */
   .settings-grid {
+    max-inline-size: 520px;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--_space-6);
   }
   .settings-actions {
@@ -698,24 +718,6 @@ const STYLES = `
     color: var(--_ink);
     font-weight: var(--ha-font-weight-medium, 500);
   }
-  .channel-empty {
-    min-block-size: 300px;
-    display: grid;
-    align-content: center;
-    justify-items: start;
-    gap: var(--_space-3);
-  }
-  .channel-empty-title {
-    font-size: var(--ha-font-size-xl, 20px);
-    font-weight: var(--ha-font-weight-medium, 500);
-  }
-  .channel-empty-body {
-    max-inline-size: 50ch;
-    color: var(--_ink-dim);
-    font-size: var(--ha-font-size-m, 14px);
-    line-height: var(--ha-line-height-normal, 1.6);
-  }
-  .channel-empty .action-button { margin-block-start: var(--_space-3); }
   /* A ledger, not a stack of cards: hairlines carry the rhythm. */
   .channel-action-list {
     margin: 0;
@@ -1458,6 +1460,8 @@ class IkeaBilresaPanel extends HTMLElement {
     // A snapshot that arrived while a form control held focus.
     this._renderDeferred = false;
     this._settingsMessageScope = null;
+    // Which channel's switch shows the "Saved" note.
+    this._settingsMessageChannel = null;
     this._testBusy = false;
     this._testMessage = null;
   }
@@ -2838,34 +2842,6 @@ class IkeaBilresaPanel extends HTMLElement {
     const card = el("div", "channel-detail");
     card.dataset.state = missingTarget ? "warning" : configured ? "ready" : "empty";
 
-    if (!configured && this._editingChannel !== number) {
-      const empty = el("div", "channel-empty");
-      empty.appendChild(
-        el(
-          "div",
-          "channel-empty-title",
-          this._t(
-            isButton ? "button_empty_title" : "channel_empty_title",
-            isButton ? { button: number } : { channel: number },
-          ),
-        ),
-      );
-      empty.appendChild(
-        el(
-          "div",
-          "channel-empty-body",
-          this._t(isButton ? "button_empty_body" : "channel_empty_body"),
-        ),
-      );
-      const add = el("button", "action-button", this._t("add_binding"));
-      add.type = "button";
-      add.dataset.primary = "true";
-      add.addEventListener("click", () => this._startEditor(wheel, channel));
-      empty.appendChild(add);
-      card.appendChild(empty);
-      return card;
-    }
-
     const head = el("div", "channel-detail-head");
     const copy = el("div", "channel-detail-copy");
     copy.appendChild(
@@ -2889,6 +2865,12 @@ class IkeaBilresaPanel extends HTMLElement {
     }
     copy.appendChild(el("div", "channel-detail-summary", summary));
     head.appendChild(copy);
+    // The channel's on/off switch sits on its own card, where the channel is,
+    // instead of in a separate "Active channels" card further down.
+    const tools = el("div", "channel-detail-tools");
+    if (!isButton && channel.enabled !== undefined) {
+      tools.appendChild(this._channelSwitch(wheel, channel));
+    }
     if (this._editingChannel !== number) {
       const edit = el(
         "button",
@@ -2897,8 +2879,9 @@ class IkeaBilresaPanel extends HTMLElement {
       );
       edit.type = "button";
       edit.addEventListener("click", () => this._startEditor(wheel, channel));
-      head.appendChild(edit);
+      tools.appendChild(edit);
     }
+    if (tools.childElementCount) head.appendChild(tools);
     card.appendChild(head);
 
     // Editing replaces the ledger: the form states the same facts, and keeping
@@ -3111,58 +3094,60 @@ class IkeaBilresaPanel extends HTMLElement {
     return message;
   }
 
-  // Which selector positions exist at all. A switch applies at once, like
-  // every other switch in Home Assistant, so this card needs no Save.
-  _activeChannelsSection(wheel) {
+  // Whether a selector position exists at all. A switch applies at once, like
+  // every other switch in Home Assistant, so there is no Save for it.
+  _channelSwitch(wheel, channel) {
     const draft = this._settingsStateFor(wheel);
-    const section = this._settingsCard(
-      this._t("settings_channels_title"),
-      this._t("settings_intro"),
-    );
-    const toggles = el("div", "settings-toggles");
-    (wheel.channels || []).forEach((channel) => {
-      const key = String(channel.channel);
-      const label = this._t("settings_channel_enabled", {
-        channel: channel.channel,
+    const key = String(channel.channel);
+    const wrap = el("div", "channel-switch");
+    const apply = (checked) => {
+      this._updateSettingsDraft(wheel, {
+        channel_enabled: {
+          ...this._settingsStateFor(wheel).channel_enabled,
+          [key]: Boolean(checked),
+        },
       });
-      const apply = (checked) => {
-        this._updateSettingsDraft(wheel, {
-          channel_enabled: {
-            ...this._settingsStateFor(wheel).channel_enabled,
-            [key]: Boolean(checked),
-          },
-        });
-        this._saveSettings(wheel, "channels");
-      };
-      const id = `settings-${wheel.key}-channel-${key}`;
-      const control = this._haSelector({
-        id,
-        selector: { boolean: {} },
-        value: draft.channel_enabled[key] !== false,
-        label,
-        required: false,
-        onChange: apply,
-      });
-      if (control) {
-        control.disabled = this._settingsBusy;
-        toggles.appendChild(control);
-        return;
-      }
+      this._settingsMessageChannel = key;
+      this._saveSettings(wheel, "channels");
+    };
+    const id = `settings-${wheel.key}-channel-${key}`;
+    const label = this._t("channel_active");
+    const control = this._haSelector({
+      id,
+      selector: { boolean: {} },
+      value: draft.channel_enabled[key] !== false,
+      label,
+      required: false,
+      onChange: apply,
+    });
+    if (control) {
+      control.disabled = this._settingsBusy;
+      control.setAttribute(
+        "aria-label",
+        this._t("settings_channel_enabled", { channel: channel.channel }),
+      );
+      wrap.appendChild(control);
+    } else {
       const row = el("label", "settings-toggle");
       const box = el("input");
       box.id = id;
       box.type = "checkbox";
       box.checked = draft.channel_enabled[key] !== false;
       box.disabled = this._settingsBusy;
+      box.setAttribute(
+        "aria-label",
+        this._t("settings_channel_enabled", { channel: channel.channel }),
+      );
       box.addEventListener("change", () => apply(box.checked));
       row.appendChild(box);
       row.appendChild(el("span", null, label));
-      toggles.appendChild(row);
-    });
-    section.appendChild(toggles);
-    const status = this._settingsStatus("channels");
-    if (status) section.appendChild(status);
-    return section;
+      wrap.appendChild(row);
+    }
+    if (this._settingsMessageChannel === key) {
+      const status = this._settingsStatus("channels");
+      if (status) wrap.appendChild(status);
+    }
+    return wrap;
   }
 
   // The dial is the number entity each channel carries. It is not the binding,
@@ -3234,7 +3219,6 @@ class IkeaBilresaPanel extends HTMLElement {
   _channelsView(wheel) {
     const wrap = el("div");
     wrap.appendChild(this._stackedControls(wheel));
-    wrap.appendChild(this._activeChannelsSection(wheel));
     wrap.appendChild(this._dialSection(wheel));
     return wrap;
   }

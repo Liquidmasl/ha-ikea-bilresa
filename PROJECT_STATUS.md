@@ -2,6 +2,23 @@
 
 Last updated: **2026-10-04 by Claude Code**
 
+## Owner's verdict on rc.1, and the compact card layout (2026-10-18)
+
+Status: **Code + tests + preview, not released.** The owner's screenshots of
+rc.1 in his Home Assistant (1650 px window): "terribly cluttered and stretched".
+Causes found in them: content 1100 px wide; every unconfigured channel a large
+card with a heading, a paragraph and a primary button; a separate "Active
+channels" card with three widely spaced switches; two dial sliders side by
+side across the card.
+
+Changes: `--_detail-max` 880 px; an unconfigured control is the same compact
+head as a configured one (title, "Not configured", tools); each channel's
+switch (`_channelSwitch`) sits in its card head, `_activeChannelsSection` is
+gone; the dial's fields are one column, at most 520 px; the dial intro and the
+switched-off note are shorter; six strings removed, `channel_active` added.
+Checked: ruff, 487 Python and 41 frontend tests, preview at 1650 px and 390 px
+(no overflow, no console errors).
+
 ## `v0.6.1-rc.1` published and deployed (2026-10-18)
 
 Status: **Released (pre-release) + CI + deployed. The new layout is not yet

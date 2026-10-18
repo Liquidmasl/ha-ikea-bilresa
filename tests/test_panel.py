@@ -363,7 +363,7 @@ def test_panel_detail_collapses_on_its_own_width_not_the_window() -> None:
     )
     # The detail needs the overview's ceiling too: without it a wide window
     # drags a fact's label and its value to opposite ends of the screen.
-    assert "--_detail-max: 1100px;" in asset
+    assert "--_detail-max: 880px;" in asset
     assert ".detail-inner { inline-size: min(100%, var(--_detail-max)); }" in asset
 
 
@@ -480,6 +480,9 @@ def test_every_channel_is_its_own_card_on_one_page() -> None:
     # A switched-off channel says so on its card.
     assert 'card.dataset.state = "off"' in stacked
     assert '"channel_off_note"' in stacked
+    # Its switch sits on its card; there is no separate "Active channels" card.
+    assert "tools.appendChild(this._channelSwitch(wheel, channel))" in channel
+    assert "_activeChannelsSection" not in asset
 
 
 def test_an_unconfigured_channel_stays_lighter_than_a_configured_one() -> None:
@@ -489,12 +492,12 @@ def test_an_unconfigured_channel_stays_lighter_than_a_configured_one() -> None:
     empty channels rendered as two large blank rectangles beside one real one.
     """
     asset = _asset()
-    channel = asset.split("  _channelDetail(wheel, channel) {", 1)[1].split(
-        "  _isNoAction(action) {", 1
-    )[0]
 
-    assert 'el("div", "channel-empty")' in channel
-    assert '"channel_empty_title"' in channel
+    # One compact head, like a configured channel's, with no ledger under it:
+    # the 0.6.1-rc.1 heading, paragraph and primary button were a poster.
+    assert "channel-empty" not in asset
+    empty_head = '.channel-detail[data-state="empty"] .channel-detail-head'
+    assert f"{empty_head} {{ margin-block-end: 0; }}" in asset
     assert "min-block-size: 100%;" not in asset
 
     # Dimmed, never italic: HA does not italicise state, and an italic label is

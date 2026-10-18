@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning 2.0.0](https://semver.org/spec/
 
 ## [Unreleased]
 
+### Changed
+- **The device page is more compact.** Content is at most 880 px wide instead
+  of 1100 px. A channel without a binding is one line ("Channel 2 · Not
+  configured" with its switch and "Add a binding") instead of a large card
+  with a paragraph. Each channel's on/off switch sits on its own card, so the
+  separate "Active channels" card is gone. The dial's two values are stacked
+  in a bounded column, and its description is shorter.
+
 ## [0.6.1-rc.1] - 2026-10-18
 
 ### Changed
