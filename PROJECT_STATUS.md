@@ -2,6 +2,27 @@
 
 Last updated: **2026-10-04 by Claude Code**
 
+## `v0.6.1-rc.1` published and deployed (2026-10-18)
+
+Status: **Released (pre-release) + CI + deployed. The new layout is not yet
+seen in the owner's real Home Assistant** (the in-app browser's sign-in had
+expired, and passwords are not entered by the agent).
+
+- CI run `39120896367` (workflow_dispatch on `agent/panel-0.6.1`, which has no
+  PR) passed for exact commit `4fa3e8e`, including the newest Home Assistant
+  pre-release job.
+- Annotated tag `v0.6.1-rc.1` on `4fa3e8e`; pre-release at
+  https://github.com/Vituhlos/ha-ikea-bilresa/releases/tag/v0.6.1-rc.1.
+- Home Assistant backup `pred-bilresa-0.6.1-rc.1-2026-10-18` (`04cf2dc5`)
+  first. HACS installed exactly `v0.6.1-rc.1`; Home Assistant restarted (the
+  MCP transport dropped during the restart call, as expected; it was not
+  repeated).
+- Read back: manifest `0.6.1-rc.1`, config entry `loaded`, overview contract 6
+  with three devices, no system log entry from the integration.
+
+**Single best next action:** the owner looks at the panel (Ctrl+F5) on desktop
+and phone and reports.
+
 ## 0.6.1: layout A implemented (2026-10-18)
 
 Status: **Code + local tests + preview. Not released, not deployed, not yet
