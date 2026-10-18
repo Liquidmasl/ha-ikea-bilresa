@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning 2.0.0](https://semver.org/spec/
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-18
+
+The first stable release since 0.5.0. Everything below this section was
+published as pre-releases `0.5.7-rc.4` to `0.6.0-rc.17`; their entries keep
+the detail. This section is the summary for anyone coming from 0.5.0.
+
+**Before upgrading:** it needs Home Assistant **2026.8 or newer**, and its
+first start removes duplicate BILRESA devices from the device registry, which
+cannot be undone without a backup. Take a backup first.
+
+### Breaking
+- **Device triggers were removed** ("Channel 1 scrolled up" on the device
+  page). Since Home Assistant 2026.8 a device belongs to one integration, and
+  the wheel's device belongs to core Matter. Replace them with the new
+  automation triggers below; **Settings → System → Repairs** lists the
+  automations that still use one. Automations on the event entities, on the
+  blueprint or on the `ikea_bilresa_event` bus event are unaffected.
+- `device_id` in the `ikea_bilresa_event` bus event names the core Matter
+  device. Filtering by `node_id` is unaffected.
+
+### Added
+- **The BILRESA dual button (E2489):** both buttons get events, automation
+  triggers and bindings.
+- **The BILRESA panel** in the sidebar: an overview of every wheel and button,
+  a binding editor that uses Home Assistant's own entity picker, sliders and
+  switches, a live test of every gesture, and diagnostics.
+- **More binding targets and gestures:** a wheel can also control a media
+  player's volume, a cover, a thermostat, a fan, or a number; double and
+  triple press can toggle their own targets; a scene list cycles on a short
+  press.
+- **Automation triggers for every gesture** (`ikea_bilresa.rotated_up`,
+  `rotated_down`, `pressed`, `double_pressed`, `triple_pressed`, `held`,
+  `released`), targeting the wheel's channel or the button's entities.
+- **Per-channel dials and switches**, and a per-wheel switch to ignore a
+  selector position entirely.
+- Optional perceptual step placement for brightness.
+- Czech translation of the integration and the panel; entity names are
+  translated.
+
+### Fixed
+- **Every wheel and dual button appeared twice on Home Assistant 2026.8 and
+  newer.** Entities now attach to the core Matter device, and the duplicates
+  are removed on the first start.
+- The first notch of a rotation acts immediately, without waiting for the
+  device's first count (about half a second).
+- Scrolling no longer loses steps against a light that reports its state late
+  or dims gradually, and bursts of commands are coalesced.
+- The dual button's overflowing press count is no longer read as a single
+  press.
+
+### Changed
+- Minimum Home Assistant is 2026.8.0 (was 2026.6.0).
+
 ## [0.6.0-rc.17] - 2026-10-04
 
 ### Fixed
@@ -844,7 +897,8 @@ and this project adheres to [Semantic Versioning 2.0.0](https://semver.org/spec/
 - Single-instance config flow with automatic Matter Server URL detection.
 - English and Czech translations.
 
-[Unreleased]: https://github.com/Vituhlos/ha-ikea-bilresa/compare/v0.6.0-rc.6...HEAD
+[Unreleased]: https://github.com/Vituhlos/ha-ikea-bilresa/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/Vituhlos/ha-ikea-bilresa/compare/v0.5.0...v0.6.0
 [0.6.0-rc.6]: https://github.com/Vituhlos/ha-ikea-bilresa/compare/v0.6.0-rc.5...v0.6.0-rc.6
 [0.6.0-rc.5]: https://github.com/Vituhlos/ha-ikea-bilresa/compare/v0.6.0-rc.4...v0.6.0-rc.5
 [0.6.0-rc.4]: https://github.com/Vituhlos/ha-ikea-bilresa/compare/v0.6.0-rc.3...v0.6.0-rc.4

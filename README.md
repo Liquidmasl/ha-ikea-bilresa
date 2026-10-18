@@ -11,23 +11,11 @@ wheel and dual button** (Matter over Thread). The wheel reacts to real-time
 `MultiPressOngoing` events for DIRIGERA-like smoothness; the dual button gains
 independent events, bindings, automation triggers and the same BILRESA panel.
 
-> **Status:** latest stable release v0.5.0; prerelease **v0.6.0-rc.6** adds the
-> BILRESA dual button through roadmap phases B0-B3. Its two buttons have
-> independent events, triggers and bindings; the existing panel adapts its
-> `1 / 2 / 3` wheel workbench to buttons `1 / 2` and retains an adapted Live
-> test. RC.3 keeps the corrected real-device discovery, supports Matter Server
-> 9.1.0/schema 12 through its schema-11 compatibility profile, and fixes the
-> real E2489 overflow where `MultiPressComplete(0)` was incorrectly treated as
-> a single press. A controlled Matter Server restart exposed a premature
-> runtime fallback in RC.3. RC.4 keeps the core Matter source through that
-> temporary restart gap; its exact installed candidate passed reconnection
-> without fallback and completed the targeted B4 failure-injection pass. RC.5
-> makes each confirmed rotary `InitialPress` act immediately, reconciles it
-> exactly against later cumulative counts, and stops repeating unchanged
-> service calls at bounded target limits. RC.6 additionally prevents delayed
-> target-state reports from erasing confirmed steps during an active scroll,
-> including a quick direction reversal. Its automated validation is complete;
-> controlled section G tuning uses the owner's selected `Kolečko Obývák`.
+> **Status:** latest stable release **v0.6.0**. It adds the BILRESA dual
+> button, the BILRESA panel, more binding targets and automation triggers for
+> every gesture. It needs Home Assistant 2026.8 or newer and replaces the old
+> device triggers; read the upgrade notes in [CHANGELOG.md](CHANGELOG.md) and
+> take a backup before upgrading from 0.5.x.
 
 > **Development handoff:** current implementation state, validation level, and
 > prioritized backlog live in [PROJECT_STATUS.md](PROJECT_STATUS.md). The shared
