@@ -304,3 +304,44 @@ paragraphs explaining the channel and button navigation are gone.
 The production default stays `classic` until the owner chooses; the losing
 layout is then deleted, not kept behind the switch.
 
+### How popular panels with their own sidebar entry are built (2026-10-18)
+
+Looked at for the A/B decision. Stars as of 2026-10-18.
+
+- **HACS** (hacs/integration, 7.8k): HA's own `hass-tabs-subpage` and
+  `hass-subpage` (confirmed by code search in hacs/frontend). A list page; an
+  item opens as a subpage with a back arrow and the item's name in the bar.
+- **KNX panel** (XKNX/knx-frontend, the panel of a core integration, built by
+  Home Assistant developers): `hass-tabs-subpage` for the sections, with the
+  tabs in the bar, and `hass-subpage` for create and edit pages.
+- **Alarmo** (nielsfaber/alarmo, 2.3k, from its README screenshots): a bar
+  with tabs (General, Sensors, Codes, Actions), then stacked cards; each card
+  has a title, one sentence of description, rows of "name and description on
+  the left, control on the right", and its own Save at the bottom.
+- Home Assistant's own device page: back arrow and device name in the bar,
+  cards in columns.
+
+None of them has a second sidebar or a navigation control that needs a
+paragraph to explain it. All of them match layout A, not B.
+
+Of these components, `hass-tabs-subpage` was registered on the owner's
+instance on a cold load of the panel (Phase 0); `hass-subpage` was not. The
+rule from Phase 2 stands: use Home Assistant's components when present, never
+depend on them.
+
+### A feature request that the layout has to make room for
+
+Discussion #7 (gfhome104, 2026-09-26, "One BILRESA channel for room lights")
+describes a physically tested profile on one channel: a click turns the room
+on at 100 % or off; rotating dims, and rotating up from off starts low (about
+4 %); **hold, then rotate** changes white temperature between two limits;
+**hold and release without rotating** steps through Kelvin presets (warm,
+neutral, cool). The owner answered on 2026-10-17 that he wants it after 0.6.x
+is stable.
+
+For the panel this means: a profile choice at the top of the editor, a
+"hold and rotate" row in the ledger, an ordered preset list (the scene list
+already is one), and separate step and transition fields for brightness and
+temperature. A card per channel (layout A) leaves room for a longer editor;
+the spine layout (B) squeezes it into the narrow surface beside the spine.
+
