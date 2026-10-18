@@ -6,7 +6,11 @@ forwards every event message to a callback. It never sends device commands,
 so it cannot interfere with the core Matter integration that shares the same
 server.
 
-Protocol (python-matter-server / matter.js server, schema 11):
+Protocol (python-matter-server / matter.js server):
+  * This listener implements the schema-11 compatibility profile.
+  * Newer servers are accepted while their minimum supported schema is <= 11.
+    matterjs-server 1.2.6 (Matter Server add-on 9.1.0) uses server schema 12
+    and explicitly keeps schema 11 as its minimum supported client schema.
   * On connect the server sends a ServerInfo message.
   * The client sends ``{"message_id": id, "command": "start_listening",
     "args": {}}``.
@@ -32,10 +36,38 @@ _LOGGER = logging.getLogger(__name__)
 EventCallback = Callable[[str, Any], None]
 
 _RECONNECT_MAX = 60
+MATTER_CLIENT_SCHEMA_VERSION = 11
+
+
+class MatterWSIncompatible(RuntimeError):
+    """Raised when the Matter Server WebSocket schema is incompatible."""
+
+
+def validate_server_info(server_info: Any) -> dict[str, Any]:
+    """Validate the schema-11-compatible contract used by the passive client."""
+    if not isinstance(server_info, dict) or "sdk_version" not in server_info:
+        raise MatterWSIncompatible("Matter Server did not send a valid ServerInfo")
+    schema_version = server_info.get("schema_version")
+    minimum = server_info.get("min_supported_schema_version")
+    if not isinstance(schema_version, int) or not isinstance(minimum, int):
+        raise MatterWSIncompatible("Matter Server did not report schema bounds")
+    if schema_version < MATTER_CLIENT_SCHEMA_VERSION:
+        raise MatterWSIncompatible(
+            f"Matter Server schema {schema_version} is older than required "
+            f"schema {MATTER_CLIENT_SCHEMA_VERSION}"
+        )
+    if minimum > MATTER_CLIENT_SCHEMA_VERSION:
+        raise MatterWSIncompatible(
+            f"Matter Server requires schema {minimum}, but this integration "
+            f"supports schema {MATTER_CLIENT_SCHEMA_VERSION}"
+        )
+    return server_info
 
 
 class MatterWSClient:
     """A resilient, read-only WebSocket listener for the Matter Server."""
+
+    source = "dedicated_websocket"
 
     def __init__(
         self, url: str, session: ClientSession, on_event: EventCallback
@@ -95,7 +127,7 @@ class MatterWSClient:
             self._url, heartbeat=30, max_msg_size=0
         ) as ws:
             # First message is always the ServerInfo message.
-            self.server_info = await ws.receive_json()
+            self.server_info = validate_server_info(await ws.receive_json())
             _LOGGER.debug(
                 "Matter Server connected: %s",
                 (self.server_info or {}).get("sdk_version"),

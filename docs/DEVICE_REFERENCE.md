@@ -1,56 +1,42 @@
-# IKEA BILRESA scroll wheel — device & Home Assistant reference
+# IKEA BILRESA scroll wheel — device reference
 
-Everything concrete we learned about the **IKEA BILRESA scroll wheel** as it
-appears in this Home Assistant setup, pulled live from HA (device registry,
-Matter node diagnostics, state machine, logs) and from upstream research. This
-is the canonical reference so future work doesn't have to rediscover it.
+This is the canonical, sanitized reference for facts observed in the owner's
+Home Assistant environment on 2026-07-14/15 and rechecked on 2026-07-18. It
+intentionally omits household
+names, node IDs, device and config-entry IDs, serial numbers, network addresses,
+entity IDs, automation names and account details. Do not add those values to a
+committed fixture or diagnostic report.
 
-> Captured 2026‑07‑14/15 from the owner's live system. Values like battery %,
-> firmware and node availability are point‑in‑time; the structural facts
-> (endpoints, clusters, event model) are stable for this hardware/firmware.
+These observations describe the device and protocol only. They do not mean the
+current working tree or any post-v0.5.0 feature is hardware-verified.
 
----
+## Hardware and environment baseline
 
-## 1. The physical devices
+- Two commissioned IKEA BILRESA scroll wheels, product E2490, Matter vendor ID
+  4476 (`0x117C`), model `BILRESA scroll wheel`.
+- Matter over Thread sleepy end device using one AAA battery; a device may be
+  commissioned to multiple Matter fabrics.
+- As of 2026-07-18, both commissioned wheels run firmware `1.9.15` on hardware
+  `P2.0`. Earlier observations of one wheel on `1.8.7` remain historical
+  compatibility evidence only.
+- Home Assistant Core `2026.7.2` on HA OS `18.1`.
+- Matter Server add-on `9.0.4`: matterjs-server `1.1.7`, matter.js `0.17.4`,
+  WebSocket schema `11`, matter-python-client `0.7.1`.
 
-Two BILRESA wheels are commissioned (plus one spare, not paired). Both are
-**Matter over Thread**, IKEA product **E2490**, `manufacturer = "IKEA of Sweden"`,
-`model = "BILRESA scroll wheel"`, Matter **vendor id 4476 (0x117C)**.
+Version and battery values are point-in-time facts. Repeat the compatibility
+matrix in `HARDWARE_TEST.md` after a relevant upgrade.
 
-| | Wheel "Nelča" | Wheel "Kitchen" |
-|---|---|---|
-| Matter **node_id** | **12** | **2** |
-| HA device name | `BILRESA scroll wheel (Nelča)` | `Ovladač Linka/Lustr` (user‑named) |
-| HA `device_id` | `bea15ec39b9a4d6bed084095a3885467` | `db19d5beb1839341242d10734dd540a9` |
-| Area | `pokoj_nelca` | (kitchen) |
-| Serial | `1035970000A0DDEC` | — |
-| Firmware (sw) | `1.9.15` | `1.9.15` |
-| Hardware (hw) | `P2.0` | `P2.0` |
+## Matter node structure
 
-Nelča device extra facts (from `ha_get_device`):
-- Thread **sleepy end device**, network `MyHome1203563120`, IPv6
-  `fdfe:a1f8:2d16:0:b6c6:256e:6c7a:dad9`.
-- Battery **AAA**, ~**60 %** at capture time.
-- Matter fabrics: **Apple Keychain** (Apple Home) + **Home Assistant** (label
-  "Domov"). It is paired to *both* Apple Home and HA.
-- Matter node identifiers used by the core Matter integration for the HA device:
-  - `("matter", "serial_1035970000A0DDEC")`
-  - `("matter", "deviceid_87B44E9F2FE3878A-000000000000000C-MatterNodeDevice")`
-    (the `...000000000000000C...` segment is node id `0x0C = 12`.)
+The wheel exposes three selectable channels. Each channel uses three Matter
+endpoints with the Switch cluster `0x003B` (59), Identify `0x0003` and
+Descriptor `0x001D`:
 
----
-
-## 2. Matter node structure (node 12, from diagnostics)
-
-The wheel exposes **3 channels** (a physical 3‑position selector picks the
-active one). Each channel is **3 Matter endpoints**, all exposing the **Switch
-cluster `0x003B` (59)** plus Identify (`0x0003`) and Descriptor (`0x001D`).
-
-| Endpoint | Channel | Role | Switch FeatureMap | MultiPressMax |
-|---|---|---|---|---|
-| 1 | 1 | scroll **up** (rotary) | `22` = MS+MSR+MSM | **18** |
-| 2 | 1 | scroll **down** (rotary) | `22` | 18 |
-| 3 | 1 | **button** | `30` = MS+MSR+MSL+MSM | 3 |
+| Endpoint | Channel | Role | FeatureMap | MultiPressMax |
+|---|---:|---|---:|---:|
+| 1 | 1 | scroll up | 22 | 18 |
+| 2 | 1 | scroll down | 22 | 18 |
+| 3 | 1 | button | 30 | 3 |
 | 4 | 2 | scroll up | 22 | 18 |
 | 5 | 2 | scroll down | 22 | 18 |
 | 6 | 2 | button | 30 | 3 |
@@ -58,204 +44,151 @@ cluster `0x003B` (59)** plus Identify (`0x0003`) and Descriptor (`0x001D`).
 | 8 | 3 | scroll down | 22 | 18 |
 | 9 | 3 | button | 30 | 3 |
 
-**FeatureMap bits** (Switch cluster attr `0xFFFC` / 65532):
-`bit0 LatchingSwitch, bit1 MomentarySwitch (MS), bit2 MomentarySwitchRelease
-(MSR), bit3 MomentarySwitchLongPress (MSL), bit4 MomentarySwitchMultiPress
-(MSM)`. So `22 = 0b10110 = MS|MSR|MSM`; `30 = 0b11110 = MS|MSR|MSL|MSM`.
-Rotary endpoints have `NumberOfPositions = 2` and `MultiPressMax = 18`; button
-endpoints add long‑press and have `MultiPressMax = 3`.
+Switch FeatureMap bits are MomentarySwitch (bit 1),
+MomentarySwitchRelease (bit 2), MomentarySwitchLongPress (bit 3) and
+MomentarySwitchMultiPress (bit 4). Rotary endpoints expose `22` and button
+endpoints expose `30`.
 
-### How the role is decoded (works for any BILRESA, no hard‑coding)
+### Role and channel discovery
 
-Each endpoint's **Descriptor `TagList` (cluster `0x001D`, attribute `0x0004` /
-`ep/29/4`)** carries semantic tags. The Matter Server delivers each tag as a
-dict keyed by TLV field number:
+Descriptor `TagList` is attribute `ep/29/4`. Matter Server supplies each tag as
+a mapping keyed by TLV field number:
 
-```
-{ "0": <MfgCode|null>, "1": <NamespaceID>, "2": <Tag>, "3": <Label?> }
+```json
+{"0": null, "1": 67, "2": 3, "3": "optional label"}
 ```
 
-- **Switches namespace `0x43` (67)** gives the role — tag `3 = Up`, `4 = Down`,
-  `2 = Toggle`, `5 = Next`, `6 = Previous`, `8 = Custom` (label `"rotary"` or
-  `"button"`).
-- A tag with a **numeric label** (`"1"/"2"/"3"`) gives the **channel number**.
+Switches namespace `0x43` (67) tag 3 means up, tag 4 means down and the
+remaining button tags identify the button endpoint. A numeric label `1`, `2` or
+`3` supplies the channel. This lets the integration discover roles without
+hard-coded node IDs.
 
-Observed raw taglists:
-- EP1 (ch1 up): `[{"1":8,"2":6,"3":"1"}, {"1":67,"2":3}, {"1":67,"2":8,"3":"rotary"}]`
-- EP2 (ch1 down): `[{"1":8,"2":6,"3":"1"}, {"1":67,"2":4}, {"1":67,"2":8,"3":"rotary"}]`
-- EP3 (ch1 button): `[{"1":8,"2":6,"3":"1"}, {"1":67,"2":2}, {"1":67,"2":6}, {"1":67,"2":5}, {"1":67,"2":8,"3":"button"}]`
-- (EP4–9 identical pattern with label `"2"`/`"3"`.)
+The Basic Information cluster `0x0028` reports IKEA as vendor, product E2490,
+hardware and software versions. Firmware `1.9.15` exposes a serial number at
+`0/40/15`, but the owner's `1.8.7` wheel omitted that optional attribute. Its
+value must never be recorded in this repository. Device-registry linking must
+therefore retain a serial-independent fallback.
 
-Rule used: `Switches tag 3 → scroll_up`, `tag 4 → scroll_down`, otherwise
-`button`; channel = the digit label.
+## Switch cluster events
 
-### Root endpoint 0 (Basic Information, cluster `0x0028`/40)
+| Event ID | Name | Payload fields |
+|---:|---|---|
+| `0x00` | SwitchLatched | `newPosition` |
+| `0x01` | InitialPress | `newPosition` |
+| `0x02` | LongPress | `newPosition` |
+| `0x03` | ShortRelease | `previousPosition` |
+| `0x04` | LongRelease | `previousPosition` |
+| `0x05` | MultiPressOngoing | `newPosition`, `currentNumberOfPressesCounted` |
+| `0x06` | MultiPressComplete | `previousPosition`, `totalNumberOfPressesCounted` |
 
-`VendorName "IKEA of Sweden"`, `VendorID 4476`, `ProductName "BILRESA scroll
-wheel"`, `ProductID 32768`, `0/40/11 "20250916"`, `0/40/12 "E2490"`,
-`0/40/13 "www.ikea.com"`, `HardwareVersionString "P2.0"`, `SoftwareVersionString
-"1.9.15"`, `SerialNumber "1035970000A0DDEC"`. Also PowerSource (`0x002F`/47,
-AAA battery), Thread Network Diagnostics (`0x0035`/53), General Diagnostics,
-OTA. `SerialNumber` is `0/40/15`.
+The camelCase field spelling above was observed from the live Matter Server.
 
----
+### Observed gesture behavior
 
-## 3. Switch cluster events (`0x003B`) — the core of everything
+A fast rotary gesture typically produces:
 
-| event_id | Name | Data fields |
-|---|---|---|
-| `0x00` | SwitchLatched | `NewPosition` |
-| `0x01` | **InitialPress** | `NewPosition` |
-| `0x02` | **LongPress** | `NewPosition` |
-| `0x03` | **ShortRelease** | `PreviousPosition` |
-| `0x04` | **LongRelease** | `PreviousPosition` |
-| `0x05` | **MultiPressOngoing** | `NewPosition`, `CurrentNumberOfPressesCounted` |
-| `0x06` | **MultiPressComplete** | `PreviousPosition`, `TotalNumberOfPressesCounted` |
-
-**Data key names as delivered by the Matter Server (camelCase — confirmed live):**
-`newPosition`, `previousPosition`, `currentNumberOfPressesCounted`,
-`totalNumberOfPressesCounted`.
-
-### Real observed event anatomy (from live debug logs)
-
-One scroll "gesture" on a rotary endpoint produces, in order:
-
-```
-initial_press                                   # start (noise)
-multi_press_ongoing  count = 6                  # CUMULATIVE within the gesture…
-multi_press_ongoing  count = 12                 # …and it LEAPS (not +1)
-multi_press_ongoing  count = 16
-multi_press_ongoing  count = 18
-short_release                                   # (interleaved / noise)
-multi_press_complete count = 18                 # final total; resets the gesture
+```text
+initial_press
+multi_press_ongoing  count=6
+multi_press_ongoing  count=12
+multi_press_ongoing  count=16
+multi_press_ongoing  count=18
+short_release
+multi_press_complete count=18
 ```
 
-Key facts we verified on the hardware:
-- **`count` is cumulative within a gesture** and jumps by several notches at a
-  time. To move a target by the right amount you must use the **delta between
-  consecutive events** (`Δ = new − last`), not treat each event as one notch.
-- The device has a **built‑in ~0.5–1 s anti‑flood delay**: during fast
-  scrolling `multi_press_ongoing` arrives roughly **once per second**, each time
-  the count leaping by ~6–8. So it is *not* truly analogue‑continuous; a
-  matching `transition` on the target bridges the batches into a smooth ramp.
-- A **single notch** = `initial_press` + `short_release` + `multi_press_complete
-  count=1` (no ongoing).
-- **Button:** single = complete `count=1`; double = complete `count=2`; triple =
-  complete `count=3`; **hold** = `initial_press` + `long_press` + `long_release`
-  (no complete). `MultiPressMax` for the button is 3.
-- Highest count seen live: **18** (the new ceiling; the old core code capped at 8).
+- Counts are cumulative within a gesture and may jump by several notches. Use
+  the difference from the preceding count, crediting any first notch already
+  emitted from the gesture's InitialPress.
+- Firmware 1.9.15 batches fast rotation in the device. Ongoing events were
+  observed roughly every 0.5–1 second, often advancing by 6–8 counts.
+- **How long the first count takes to arrive.** Measured by
+  [@cassus](https://github.com/cassus) on firmware 1.9.15 and contributed in
+  [pull request 8](https://github.com/Vituhlos/ha-ikea-bilresa/pull/8): over
+  180 rotary gestures (about two hours, 1027 Switch events on the rotary
+  endpoints 1 and 2), the time from a gesture's first InitialPress to its
+  first MultiPressOngoing or MultiPressComplete had a median of 0.534 s
+  (25th percentile 0.488 s, 75th percentile 0.681 s, maximum 5.3 s). In 11 of
+  the 180 gestures both arrived within 50 ms, in the same report. The
+  timestamps are Matter Server's receive times from its log, not the event's
+  own timestamp field, so this is the delay as a user feels it, including the
+  device's batching and the Thread hop; it is not device-side event timing.
+  It is one home and one firmware, not this project's own measurement. It is
+  the reason the first notch is applied on InitialPress.
+- The same pull request reads the Matter specification as starting
+  MultiPressOngoing at a count of 2, so that a count of 1 is only ever
+  reported by MultiPressComplete. That matches the single-notch stream below;
+  the specification text was not re-checked for this note.
+- One notch may contain only InitialPress, ShortRelease and
+  MultiPressComplete with count 1.
+- Matter's Switch contract generates InitialPress for every detected press and,
+  when both events coincide, orders MultiPressOngoing directly after it. The
+  owner's BILRESA raw stream follows that ordering but may report a cumulative
+  jump larger than the number of InitialPress events seen since the previous
+  report. Each received InitialPress is therefore an immediately safe lower
+  bound; the cumulative count supplies the remaining notches.
+  This ordering is specified in the public
+  [Matter 1.2 Application Cluster Specification](https://csa-iot.org/wp-content/uploads/2023/10/Matter-1.2-Application-Cluster-Specification.pdf),
+  Switch cluster multi-press sequence.
+- Button single/double/triple presses complete with count 1/2/3.
+- A hold is InitialPress, LongPress and LongRelease with no multi-press
+  completion. The event carries no ramp direction.
+- Waiting for MultiPressComplete adds the device's multi-press classification
+  delay. An explicitly fast binding may react once on the first ShortRelease
+  and suppress its later binding completion; a binding with double/triple
+  targets must use the completion-aware response policy and wait for the final
+  count. Public events remain completion-based in either mode.
+- The highest observed rotary count was 18.
 
-Example real log lines (Nelča, node 12, channel 2, `custom_components.ikea_bilresa`):
-```
-ch2 scroll_up   -> multi_press_ongoing (count=8)  raw={'newPosition':1,'currentNumberOfPressesCounted':8}
-ch2 scroll_up   -> multi_press_complete (count=18) raw={'previousPosition':1,'totalNumberOfPressesCounted':18}
-ch2 button      -> long_press  raw={'newPosition':1}
-ch2 button      -> long_release raw={'previousPosition':1}
-ch2 button      -> multi_press_complete (count=2) raw={'previousPosition':1,'totalNumberOfPressesCounted':2}
-```
+These are earlier device-reference observations. Re-test ordering and timing
+against the current release candidate before marking a feature Hardware.
 
----
+## Home Assistant and Matter Server behavior
 
-## 4. How the built‑in Home Assistant Matter integration exposes it
+The core Matter integration creates event entities for all nine endpoints but,
+in the observed baseline, exposed MultiPressComplete rather than the ongoing
+events needed for responsive scrolling. Entity IDs are installation-specific
+and intentionally not recorded here.
 
-For each of the 9 switch endpoints the core Matter integration creates an
-`event` entity:
+The custom integration consumes a passive Matter event stream. It prefers the
+loaded core Matter client's `subscribe_events` API when that config entry uses
+the same server URL. Its fallback opens a separate read-only WebSocket and sends
+only `start_listening`; neither source sends device-control commands.
 
-- Nelča: `event.pokoj_nelca_bilresa_scroll_wheel_nelca_tlacitko_1` … `_9`
-- Kitchen: `event.bilresa_scroll_wheel_tlacitko_1` … `_9`
+The compatible WebSocket contract is:
 
-Their `event_types` are `["multi_press_1", … , "multi_press_8"]` and attributes
-include `event_type`, `previousPosition`, `totalNumberOfPressesCounted`,
-`device_class: button`.
+1. Server sends `ServerInfo` including schema bounds.
+2. Client sends `start_listening` with a message ID and empty arguments.
+3. Command result supplies the initial node list.
+4. Streamed messages contain `event` and `data`.
 
-**The limitation:** core HA only surfaces **`MultiPressComplete`** — it waits
-until you *stop* scrolling, then fires one batched "N presses", **capped at 8**,
-and it **drops `MultiPressOngoing` entirely**. That is why plain Matter dimming
-feels laggy/jumpy and fast scrolls beyond 8 notches are lost. Upstream:
-- Issue: <https://github.com/home-assistant/core/issues/159035>
-- PR (draft): <https://github.com/home-assistant/core/pull/159045> — adds
-  `multi_press_ongoing` and raises the ceiling to 18.
+Relevant event names are `node_added`, `node_updated`, `node_removed`,
+`node_event` and `server_shutdown`. A node event includes `node_id`,
+`endpoint_id`, `cluster_id`, `event_id`, `event_number`, `priority`, `timestamp`,
+`timestamp_type` and `data`. Node attributes use
+`<endpoint>/<cluster>/<attribute>` paths.
 
-There are also `sensor.bilresa_scroll_wheel_aktualni_poloha_spinace_1..9_2`
-sensors = the Switch cluster `CurrentPosition` attribute, plus Thread
-diagnostics, battery (`sensor…nelca_baterie`), firmware `update` entity, an
-Identify `button`, and `sensor…duvod_spusteni` (boot reason).
+## Practical implementation rules
 
-**This integration** (`ikea_bilresa`) bypasses the limitation by opening its own
-read‑only connection to the Matter Server and listening for the ongoing events.
+- Filter node events to Switch cluster 59 and map endpoint to channel and role
+  using Descriptor TagList.
+- Emit every confirmed scroll notch from InitialPress, then subtract those
+  eager credits from cumulative counts so no notch is applied twice.
+- Convert ongoing and complete cumulative counts to remaining deltas and reset
+  after completion or a decreased count.
+- Reject non-integer, negative and above-`MultiPressMax` counts. A completion
+  with a missing, invalid or Matter-overflow zero count still ends local
+  accounting so stale credit cannot affect the next gesture.
+- Ignore ShortRelease for scroll delta generation. CurrentPosition returning to
+  zero is not the end of the cumulative rotary sequence and must not clear its
+  count or eager credit.
+- Preserve MultiPressComplete so a single notch and a final unsent delta are not
+  lost.
+- Use a target transition near the measured device batch interval to smooth
+  visible changes; do not add latency-only software accumulation without the
+  evidence required by `SCROLL_PERFORMANCE.md`.
+- Treat a missing LongRelease as possible. Hold-to-ramp must stop on a watchdog,
+  connection change, new gesture and unload.
 
----
-
-## 5. Environment (this HA install)
-
-- **Home Assistant OS 18.1**, Supervisor `2026.06.2`, **core `2026.7.2`**,
-  Python `3.14.6`, amd64 / KVM.
-- **Matter Server add‑on `9.0.4`** (slug `core_matter_server`), hostname
-  `core-matter-server`, WS port **5580**, path `/ws`
-  → **`ws://core-matter-server:5580/ws`**. Server identifies as
-  `matter-server/1.1.7 (matter.js/0.17.4)`, **schema_version 11**, fabric_id 2.
-- Core Matter integration config entry id: `01KJJG07W7W18V5CFSYCWJ789H`.
-- Other relevant add‑ons: `Home-Assistant-Matter-Hub 2.0.49`, `ESPHome Device
-  Builder`, `Samba`, `File editor`, `Advanced SSH & Web Terminal`, `HACS 2.0.5`,
-  `Home Assistant MCP Server 7.12.3`.
-- Owner: HA email `vituhlos@gmail.com`, GitHub **@Vituhlos**. Integration repo:
-  <https://github.com/Vituhlos/ha-ikea-bilresa>.
-
-### python‑matter‑server WebSocket API (as used by this integration)
-
-- On connect the server sends a **ServerInfo** message first.
-- Client sends `{"message_id": id, "command": "start_listening", "args": {}}`;
-  the server replies with `{"message_id": id, "result": [<all nodes>]}`, then
-  streams events as `{"event": "<type>", "data": <payload>}`.
-- **EventType** values: `node_added`, `node_updated`, `node_removed`,
-  `node_event`, `attribute_updated`, `server_shutdown`, `server_info_updated`,
-  `endpoint_added`, `endpoint_removed`.
-- A **`node_event`** payload (`MatterNodeEvent`) has: `node_id`, `endpoint_id`,
-  `cluster_id`, `event_id`, `event_number`, `priority`, `timestamp`,
-  `timestamp_type`, `data`.
-- Node objects carry `node_id` and an `attributes` dict keyed by
-  `"<endpoint>/<cluster>/<attribute>"` (e.g. `"0/40/3"`, `"1/29/4"`).
-
----
-
-## 6. Lights / entities the wheels were controlling (pre‑existing)
-
-- **`light.svetylka_svetylka`** ("Svetylka Světýlka") — an **ESPHome** light,
-  `supported_color_modes: ["brightness"]`, `supported_features: 40`
-  (= `FLASH 8` + `TRANSITION 32`, i.e. it **does support transitions**).
-  Controlled by the Nelča wheel.
-- `light.linka`, `light.zarovka_lustr` / `light.lustr` — controlled by the
-  kitchen wheel (the kitchen lustr is switched via a Shelly in the wall switch,
-  brightness at the bulb).
-
-### Pre‑existing automations (all were **disabled** during our testing)
-
-| Automation entity_id | Alias / friendly | Wheel | Controls |
-|---|---|---|---|
-| `automation.ikea_bilresa_light_controller_v1_2_fixed_for_ha_2026_7` | "Světýlka Nelča – kolečko (jas, plynulé)" / "Jas svetylka Nelča" | Nelča (node 12) | `light.svetylka_svetylka` |
-| `automation.bilresa_linka_jas_koleckem` | "BILRESA – Linka: jas kolečkem" | Kitchen (node 2) | `light.linka` |
-| `automation.ikea_bilresa_light_controller` | "IKEA BILRESA - Light Controller" | Kitchen (node 2) | `light.linka` + `light.zarovka_lustr` |
-
-The first two blueprint‑based ones use the blueprint
-`Pech/ha-blueprint-ikea-bilresa-scrollwheel_fixed.yaml`
-("IKEA BILRESA - Light Controller (v1.2 fixed for HA 2026.7)"), which reads the
-9 core `event.*_tlacitko_*` entities and steps `brightness_step_pct`. To re‑enable
-any of them: `automation.turn_on` on the entity_id.
-
----
-
-## 7. Practical decode/notes for building on this
-
-- Filter `node_event` where `cluster_id == 0x003B (59)`; map `endpoint_id` →
-  (channel, role) via the taglist rule above; decode `event_id` via §3.
-- For scroll, use the **delta** of `currentNumberOfPressesCounted`
-  (`multi_press_ongoing`) / `totalNumberOfPressesCounted` (`multi_press_complete`)
-  within a gesture; reset the running count on each `multi_press_complete` or
-  when the count decreases (new gesture).
-- Ignore `initial_press` / `short_release` for scrolling (they carry no delta).
-- For a smooth ramp on a WiFi/ESPHome light, apply the step with a
-  `transition ≈ 1 s` so the light interpolates between the ~1 s event batches.
-- A truly analogue "DIRIGERA hub" feel is **not** achievable here: the device's
-  own anti‑flood batching plus HA‑mediated control (the light is WiFi/ESPHome,
-  not a direct Matter/Zigbee bind) put a floor on smoothness. Real‑time
-  per‑batch reaction + transitions is the realistic ceiling.
+See `MATTERJS_COMPATIBILITY.md` for remaining compatibility evidence and
+`HARDWARE_TEST.md` for the release-candidate procedure.
