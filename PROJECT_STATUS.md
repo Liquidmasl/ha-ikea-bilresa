@@ -2,6 +2,20 @@
 
 Last updated: **2026-10-04 by Claude Code**
 
+
+## Stable 0.6.1 released from `main`; this branch continues as 0.7.0 (2026-10-24)
+
+`v0.6.1` (PR #10, merge `514811a`, CI run `40132322918`) is 0.6.0 plus the fix
+that makes the panel follow each user's language, with two follow-ups from the
+CodeRabbit review: a connect overtaken by a language switch drops its answer
+and closes its subscription, and the Live test's feed restarts after the
+reconnect. Codex re-reviewed the final commit with no findings. All three
+commits are on this branch too (`ea74fee`, plus the review fix).
+
+The `v0.6.1-rc.1/rc.2` release notes now say they are superseded. The owner's
+instance runs `0.6.1-rc.2`; HACS offers 0.6.1 there, which would drop the new
+layout. The next pre-release of this branch is `0.7.0-rc.1`.
+
 ## `v0.6.1-rc.2` published and deployed (2026-10-18)
 
 Status: **Released (pre-release) + CI + deployed. Not yet seen in the owner's
