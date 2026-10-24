@@ -308,7 +308,7 @@ test("dual-button live activity names its safe button number", () => {
 
 test("hold activity labels integration-observed duration honestly", () => {
   const panel = newPanel();
-  panel._language = "cs";
+  panel._hass = { language: "cs" };
   panel._panel = {
     config: {
       labels: {
@@ -902,4 +902,68 @@ test("a Home Assistant selector is handed its new value back", () => {
     registry.delete("ha-selector");
     globalThis.document = previous;
   }
+});
+
+test("the panel speaks its user's language, not the instance's", () => {
+  const panel = newPanel();
+  panel._panel = {
+    config: {
+      language: "cs",
+      labels: { add_binding: "Přidat propojení" },
+      labels_by_language: {
+        cs: { add_binding: "Přidat propojení" },
+        en: { add_binding: "Add a control binding" },
+      },
+    },
+  };
+
+  // A user who chose English in their profile on a Czech instance.
+  panel._hass = { language: "en" };
+  assert.equal(panel._lang(), "en");
+  assert.equal(panel._t("add_binding"), "Add a control binding");
+
+  // A regional tag falls back to its base language.
+  panel._hass = { language: "en-GB" };
+  assert.equal(panel._t("add_binding"), "Add a control binding");
+
+  // A language the panel does not speak falls back to the instance's.
+  panel._hass = { language: "de" };
+  assert.equal(panel._lang(), "cs");
+  assert.equal(panel._t("add_binding"), "Přidat propojení");
+});
+
+test("a backend from before 0.6.1 still works: one label set", () => {
+  const panel = newPanel();
+  panel._panel = { config: { language: "cs", labels: { add_binding: "Přidat propojení" } } };
+  panel._hass = { language: "en" };
+
+  assert.equal(panel._t("add_binding"), "Přidat propojení");
+});
+
+test("the snapshot is requested in the user's language", async () => {
+  const panel = newPanel();
+  const calls = [];
+  panel._panel = {
+    config: { language: "cs", labels_by_language: { cs: {}, en: {} } },
+  };
+  panel._hass = {
+    language: "en",
+    callWS: async (message) => {
+      calls.push(message);
+      return { wheels: [], matter_connected: true };
+    },
+    connection: {
+      subscribeMessage: async (_callback, message) => {
+        calls.push(message);
+        return () => undefined;
+      },
+    },
+  };
+
+  await panel._connect();
+
+  assert.deepEqual(
+    calls.map((message) => message.language),
+    ["en", "en"],
+  );
 });
