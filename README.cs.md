@@ -10,16 +10,24 @@
 [![release](https://img.shields.io/github/v/release/Vituhlos/ha-ikea-bilresa)](https://github.com/Vituhlos/ha-ikea-bilresa/releases)
 [![license](https://img.shields.io/github/license/Vituhlos/ha-ikea-bilresa)](LICENSE)
 
-Přidává ovládání pro **kolečko i dvoutlačítko IKEA BILRESA** (Matter přes
-Thread). Kolečko reaguje na události `MultiPressOngoing` v reálném čase, takže
-je plynulé jako přes DIRIGERA; dvoutlačítko získává nezávislé eventy,
-propojení, spouštěče automatizací a stejný panel BILRESA.
+Přidává vlastní ovládání pro **kolečko i dvoutlačítko IKEA BILRESA** (Matter
+přes Thread). Kolečko zpracovává události `MultiPressOngoing` už během otáčení.
+Fyzický ovladač ale stále hlásí cvaknutí v dávkách, takže jde o svižnější
+stupňovité ovládání, nikoli o skutečně analogově plynulé scrollování.
+Dvoutlačítko získává samostatné event entity, propojení, spouštěče automatizací
+a stejný panel BILRESA.
 
 > **Stav:** poslední stabilní vydání je **v0.6.0**. Přidává dvoutlačítko
 > BILRESA, panel BILRESA, další cíle propojení a spouštěče automatizací pro
 > každé gesto. Vyžaduje Home Assistant 2026.8 nebo novější a nahrazuje dřívější
 > spouštěče zařízení; před přechodem z 0.5.x si přečtěte poznámky k přechodu v
 > [CHANGELOG.md](CHANGELOG.md) a udělejte zálohu.
+>
+> **Stav ověření:** `v0.6.0` je poslední stabilní vydání. Novější `v0.6.1-rc.2`
+> je předběžné vydání pouze se změnami rozložení panelu; automatické kontroly a
+> lokální vykreslení prošly, změny ale ještě nebyly ověřeny v reálném Home
+> Assistantu. Některé kombinace zařízení a gest stále čekají na hardwarové
+> ověření; aktuální checklist je v [docs/HARDWARE_TEST.md](docs/HARDWARE_TEST.md).
 >
 > Plán kolečka je v [docs/ROADMAP.md](docs/ROADMAP.md), plán dvoutlačítka v
 > [docs/ROADMAP_BUTTON.md](docs/ROADMAP_BUTTON.md).
@@ -347,9 +355,13 @@ logger:
       samostatný pasivní WebSocket. *(další)*
 - [x] Naplánovaný stabilizační patch train `0.5.1`–`0.5.7`; implementace je v
       pracovním stromu, ale každý balík má vlastní ověřovací bránu.
-- [ ] Dokončit hardwarové ověření a automatické pokrytí testy.
-- [ ] **Finální publikační fáze:** brand icon/PR do `home-assistant/brands` a
-      zařazení do výchozího HACS katalogu, až když bude integrace hotová.
+- [ ] Dokončit zbývající hardwarové ověření a doplnit chybějící testovací
+      pokrytí; aktuální důkazy jsou v [docs/HARDWARE_TEST.md](docs/HARDWARE_TEST.md)
+      a [PROJECT_STATUS.md](PROJECT_STATUS.md).
+- [ ] **Publikace do ekosystému:** po splnění zbývajících ověřovacích kroků
+      odeslat ikonu do `home-assistant/brands` a požádat o zařazení integrace
+      do výchozího HACS katalogu. Stabilní vydání na GitHubu i instalace přes
+      vlastní HACS repozitář už jsou k dispozici.
 
 ## Omezení
 
