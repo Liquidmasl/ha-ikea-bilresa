@@ -1,6 +1,16 @@
 # Project status and agent handoff
 
-Last updated: **2026-10-04 by Claude Code**
+**Current snapshot — reviewed 2026-10-24**
+
+- **Latest stable release:** [`v0.6.0`](https://github.com/Vituhlos/ha-ikea-bilresa/releases/tag/v0.6.0), published 2026-10-18.
+- **Latest published pre-release:** [`v0.6.1-rc.2`](https://github.com/Vituhlos/ha-ikea-bilresa/releases/tag/v0.6.1-rc.2), published 2026-10-18. It changes the BILRESA panel layout only. Automated checks and local rendering passed, but the release notes explicitly say the change has **not yet been observed in a real Home Assistant instance**.
+- **Default branch:** `main` still declares version `0.6.0` in the integration manifest. Do not describe `0.6.1-rc.2` as a stable release.
+- **Minimum Home Assistant Core:** 2026.8.0. Upgrading from 0.5.x has breaking changes: old device triggers were removed, and first startup can remove duplicate BILRESA device-registry entries. Users should back up before upgrading and follow [CHANGELOG.md](CHANGELOG.md).
+- **Validation:** the project has automated tests and some real-device/real-Home-Assistant checks, but the hardware checklist still contains open items. Do not claim that every gesture, device variant, firmware or configuration has been fully validated. See [docs/HARDWARE_TEST.md](docs/HARDWARE_TEST.md) for the authoritative checklist.
+
+The dated entries below are preserved as a historical implementation and testing log. Their status lines and “single best next action” notes describe the state at the time they were written; they are not current release status. Use this snapshot, [CHANGELOG.md](CHANGELOG.md), and the hardware checklist for current information.
+
+---
 
 ## Pull request 8: contributor answered; measurement recorded (2026-10-06)
 
