@@ -6,16 +6,25 @@
 [![release](https://img.shields.io/github/v/release/Vituhlos/ha-ikea-bilresa)](https://github.com/Vituhlos/ha-ikea-bilresa/releases)
 [![license](https://img.shields.io/github/license/Vituhlos/ha-ikea-bilresa)](LICENSE)
 
-Add first-party-style Home Assistant control for the **IKEA BILRESA scroll
-wheel and dual button** (Matter over Thread). The wheel reacts to real-time
-`MultiPressOngoing` events for DIRIGERA-like smoothness; the dual button gains
-independent events, bindings, automation triggers and the same BILRESA panel.
+Add dedicated Home Assistant control for the **IKEA BILRESA scroll wheel and
+dual button** (Matter over Thread). The wheel processes real-time
+`MultiPressOngoing` events to respond during rotation. The physical remote still
+reports scroll input in batches, so this is responsive stepped control rather
+than truly analog-continuous scrolling. The dual button gains independent event
+entities, control bindings, automation triggers and the same BILRESA panel.
 
 > **Status:** latest stable release **v0.6.0**. It adds the BILRESA dual
 > button, the BILRESA panel, more binding targets and automation triggers for
 > every gesture. It needs Home Assistant 2026.8 or newer and replaces the old
 > device triggers; read the upgrade notes in [CHANGELOG.md](CHANGELOG.md) and
 > take a backup before upgrading from 0.5.x.
+>
+> **Testing status:** `v0.6.0` is the latest stable release. The newer
+> `v0.6.1-rc.2` is a pre-release for panel-layout changes only; its automated
+> checks and local renders passed, but it has not yet been tested in a real
+> Home Assistant instance. Hardware validation is also incomplete for some
+> device/gesture combinations; see [docs/HARDWARE_TEST.md](docs/HARDWARE_TEST.md)
+> for the current checklist.
 
 > **Development handoff:** current implementation state, validation level, and
 > prioritized backlog live in [PROJECT_STATUS.md](PROJECT_STATUS.md). The shared
@@ -351,9 +360,13 @@ logger:
       to the dedicated passive WebSocket. *(next)*
 - [x] Plan the small-patch `0.5.1`–`0.5.7` stabilization train; implementation
       exists in the working tree, but each package keeps its own validation gate.
-- [ ] Complete hardware validation and automated coverage.
-- [ ] **Final publication stage:** brand icon/`home-assistant/brands` PR and
-      default HACS-store submission, only after the integration is finished.
+- [ ] Complete the remaining hardware validation and close the test-coverage
+      gaps; see [docs/HARDWARE_TEST.md](docs/HARDWARE_TEST.md) and
+      [PROJECT_STATUS.md](PROJECT_STATUS.md) for the current evidence.
+- [ ] **Ecosystem publication:** submit the brand icon to
+      `home-assistant/brands` and the integration to the default HACS store
+      after the remaining validation gates are met. The stable GitHub release
+      and custom-repository installation are already available.
 
 ## Limitations
 
