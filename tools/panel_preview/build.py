@@ -8,7 +8,8 @@ and field schema, and a synthetic home. Serve the folder and open it:
 
 Query parameters: ``lang=cs`` (the viewing user's language, default ``en``),
 ``instance=cs`` (the Home Assistant instance's language, default ``lang``),
-``dark=1``, ``narrow=1`` (no sidebar, phone layout), ``inset=16`` (a theme that pads the panel),
+``dark=1``, ``narrow=1`` (no sidebar, phone layout),
+``inset=16`` (a theme that pads the panel),
 ``open=<wheel key>`` with ``view=channels|buttons|live|diagnostics``, and
 ``edit=<n>`` to open the editor of channel or button ``n``.
 
