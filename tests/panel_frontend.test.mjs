@@ -983,3 +983,69 @@ test("the snapshot is requested in the user's language", async () => {
     ["en", "en"],
   );
 });
+
+test("a connect overtaken by a language switch drops its answer and subscription", async () => {
+  const panel = newPanel();
+  panel._panel = { config: { language: "cs", labels_by_language: { cs: {}, en: {} } } };
+  const answers = [];
+  const subscriptions = [];
+  const unsubscribed = [];
+  panel._hass = {
+    language: "cs",
+    callWS: (message) =>
+      new Promise((resolve) => answers.push(() => resolve({ wheels: [], lang: message.language }))),
+    connection: {
+      subscribeMessage: (_callback, message) =>
+        new Promise((resolve) =>
+          subscriptions.push(() => resolve(() => unsubscribed.push(message.language))),
+        ),
+    },
+  };
+  const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  // Case 1: the Czech snapshot is still on its way when the user switches.
+  const first = panel._connect();
+  panel._hass = { ...panel._hass, language: "en" };
+  const second = panel._connect();
+  answers[1]();
+  await tick();
+  subscriptions[0]();
+  await second;
+  answers[0](); // the stale Czech answer arrives late
+  await first;
+  assert.equal(panel._snapshot.lang, "en");
+
+  // Case 2: a stale connect already got its snapshot and is subscribing.
+  panel._hass = { ...panel._hass, language: "cs" };
+  const third = panel._connect();
+  answers[2]();
+  await tick();
+  panel._hass = { ...panel._hass, language: "en" };
+  const fourth = panel._connect();
+  answers[3]();
+  await tick();
+  subscriptions[2]();
+  await fourth;
+  subscriptions[1](); // the stale Czech subscription completes late
+  await third;
+
+  assert.equal(panel._snapshot.lang, "en");
+  assert.deepEqual(unsubscribed, ["cs"]);
+});
+
+test("a language switch with the Live test open restarts the live feed", async () => {
+  const panel = newPanel();
+  let started = 0;
+  panel._startActivity = () => {
+    started += 1;
+  };
+  panel._connect = async () => {
+    panel._snapshot = { wheels: [] };
+  };
+  panel._view = "live";
+  panel._open = "wheel-a";
+
+  await panel._retry();
+
+  assert.equal(started, 1);
+});

@@ -1740,19 +1740,27 @@ class IkeaBilresaPanel extends HTMLElement {
   }
 
   async _connect() {
+    // A language switch reconnects while an earlier connect may still be in
+    // flight. Each connect takes a number; one that is no longer the latest
+    // drops its result and closes its own subscription, so an answer in the old
+    // language never overwrites the new one and no subscription is orphaned.
+    const epoch = (this._connectEpoch = (this._connectEpoch || 0) + 1);
+    const stale = () => epoch !== this._connectEpoch;
     this._error = null;
     try {
-      this._snapshot = await this._hass.callWS({
+      const snapshot = await this._hass.callWS({
         type: OVERVIEW,
         language: this._lang(),
       });
+      if (stale()) return;
+      this._snapshot = snapshot;
       this._render();
     } catch (err) {
-      this._fail(err);
+      if (!stale()) this._fail(err);
       return;
     }
     try {
-      this._unsub = await this._hass.connection.subscribeMessage(
+      const unsub = await this._hass.connection.subscribeMessage(
         (snapshot) => {
           this._snapshot = snapshot;
           if (
@@ -1769,7 +1777,13 @@ class IkeaBilresaPanel extends HTMLElement {
         },
         { type: OVERVIEW_SUBSCRIBE, language: this._lang() },
       );
+      if (stale()) {
+        unsub();
+        return;
+      }
+      this._unsub = unsub;
     } catch (err) {
+      if (stale()) return;
       // The existing snapshot remains useful; only its automatic updates stopped.
       this._error = this._message(err);
       this._render();
@@ -1796,6 +1810,9 @@ class IkeaBilresaPanel extends HTMLElement {
     this._error = null;
     this._render();
     await this._connect();
+    // A language switch reconnects with the Live test open; without this the
+    // view kept saying it was listening while no gesture arrived.
+    if (this._view === "live" && this._open && this._snapshot) this._startActivity();
   }
 
   connectedCallback() {
