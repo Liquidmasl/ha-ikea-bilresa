@@ -99,8 +99,14 @@ def _loaded_entry(hass: HomeAssistant) -> Any | None:
     return entries[0] if entries else None
 
 
+# A BCP 47 tag such as "cs" or "en-GB"; panel_strings resolves it.
+_LANGUAGE = vol.All(str, vol.Length(min=2, max=35))
+
+
 @callback
-def _snapshot_or_empty(hass: HomeAssistant) -> dict[str, Any]:
+def _snapshot_or_empty(
+    hass: HomeAssistant, language: str | None = None
+) -> dict[str, Any]:
     """A snapshot, or an honest empty one while the integration is unloaded.
 
     An unloaded integration is a state the grid can render — "nothing here" —
@@ -114,7 +120,7 @@ def _snapshot_or_empty(hass: HomeAssistant) -> dict[str, Any]:
             "event_source": "unloaded",
             "contract_version": CONTRACT_VERSION,
         }
-    return async_overview_snapshot(hass, entry)
+    return async_overview_snapshot(hass, entry, language)
 
 
 @callback
@@ -251,7 +257,9 @@ def _binding_title(
     return generated_binding_title(name, str(channel))
 
 
-@websocket_api.websocket_command({vol.Required("type"): TYPE_OVERVIEW})
+@websocket_api.websocket_command(
+    {vol.Required("type"): TYPE_OVERVIEW, vol.Optional("language"): _LANGUAGE}
+)
 @websocket_api.require_admin
 @callback
 def ws_overview(
@@ -259,8 +267,8 @@ def ws_overview(
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    """Return the current overview snapshot."""
-    connection.send_result(msg["id"], _snapshot_or_empty(hass))
+    """Return the current overview snapshot, in the viewer's language."""
+    connection.send_result(msg["id"], _snapshot_or_empty(hass, msg.get("language")))
 
 
 @websocket_api.websocket_command(
@@ -297,7 +305,9 @@ def ws_trace(
     connection.send_result(msg["id"], {"enabled": trace.enabled, **trace.capture()})
 
 
-@websocket_api.websocket_command({vol.Required("type"): TYPE_OVERVIEW_SUBSCRIBE})
+@websocket_api.websocket_command(
+    {vol.Required("type"): TYPE_OVERVIEW_SUBSCRIBE, vol.Optional("language"): _LANGUAGE}
+)
 @websocket_api.require_admin
 @callback
 def ws_overview_subscribe(
@@ -318,10 +328,14 @@ def ws_overview_subscribe(
     outlives its socket.
     """
 
+    # Every push of this subscription speaks the language it was opened in; the
+    # panel resubscribes when its user switches language.
+    language = msg.get("language")
+
     @callback
     def _push() -> None:
         connection.send_message(
-            websocket_api.event_message(msg["id"], _snapshot_or_empty(hass))
+            websocket_api.event_message(msg["id"], _snapshot_or_empty(hass, language))
         )
 
     unsubs = [
@@ -336,7 +350,7 @@ def ws_overview_subscribe(
             unsub()
 
     connection.subscriptions[msg["id"]] = _unsubscribe
-    connection.send_result(msg["id"], _snapshot_or_empty(hass))
+    connection.send_result(msg["id"], _snapshot_or_empty(hass, language))
 
 
 @websocket_api.websocket_command({vol.Required("type"): TYPE_ACTIVITY_SUBSCRIBE})

@@ -785,16 +785,20 @@ def _wheel_name_and_area(
 
 
 @callback
-def async_overview_snapshot(hass: HomeAssistant, entry: Any) -> dict[str, Any]:
+def async_overview_snapshot(
+    hass: HomeAssistant, entry: Any, language: str | None = None
+) -> dict[str, Any]:
     """Build the whole overview. Deterministic, bounded, no I/O.
 
     Bounded by construction: one entry per discovered wheel, one summary per
     channel the device reports. Nothing here grows with uptime or event volume.
+
+    `language` is the viewing user's, sent by the panel: Home Assistant keeps a
+    user's language in the browser, not on the connection. Without it (an older
+    panel script, or a server-side caller) the instance language is used.
     """
     coordinator = entry.runtime_data
-    # The instance language, not the individual user's: Home Assistant exposes no
-    # per-connection locale here. See panel_strings.
-    language = getattr(hass.config, "language", None)
+    language = language or getattr(hass.config, "language", None)
     wheels: list[WheelOverview] = []
 
     for node_id, wheel in sorted(coordinator.wheels.items()):

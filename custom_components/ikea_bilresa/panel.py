@@ -24,7 +24,7 @@ from homeassistant.loader import async_get_integration
 
 from .const import DOMAIN
 from .panel_schema import panel_schema
-from .panel_strings import panel_strings, resolve_language
+from .panel_strings import STRINGS, panel_strings, resolve_language
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -122,12 +122,15 @@ async def async_setup_panel(hass: HomeAssistant) -> bool:
             # would not fetch one. See panel_strings for why both languages live
             # in a single Python file rather than two JSON files.
             #
-            # Resolved once at registration, so a language change needs a reload.
-            # Acceptable: HA reloads the integration on a core config change.
+            # Every language ships, and the panel picks the one its user chose in
+            # their profile. Until 0.6.0 only the instance language shipped, so
+            # a user who had set English saw a Czech panel inside an English UI.
+            # `language` and `labels` stay for a panel script cached from then.
             config={
                 "version": str(integration.version),
                 "language": language,
                 "labels": panel_strings(language),
+                "labels_by_language": {code: panel_strings(code) for code in STRINGS},
                 # Ranges, units and target domains, from the same source the
                 # server validates against. The panel keeps a fallback copy
                 # only for a script cached from before this key existed.

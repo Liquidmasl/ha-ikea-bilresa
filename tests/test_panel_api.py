@@ -73,7 +73,9 @@ def _hass(*, loaded: bool = True) -> SimpleNamespace:
 def _patch_snapshot(monkeypatch, snapshot=None) -> None:
     monkeypatch.setattr(
         "custom_components.ikea_bilresa.panel_api.async_overview_snapshot",
-        lambda _hass, _entry: dict(snapshot if snapshot is not None else SNAPSHOT),
+        lambda _hass, _entry, _language=None: dict(
+            snapshot if snapshot is not None else SNAPSHOT
+        ),
     )
 
 
@@ -779,3 +781,51 @@ def test_a_stale_revision_loses_to_the_stored_settings(monkeypatch) -> None:
     assert result["ok"] is False
     assert result["error"] == "conflict"
     hass.config_entries.async_update_subentry.assert_not_called()
+
+
+def _record_languages(monkeypatch) -> list:
+    seen: list = []
+
+    def snapshot(_hass, _entry, language=None):
+        seen.append(language)
+        return dict(SNAPSHOT)
+
+    monkeypatch.setattr(
+        "custom_components.ikea_bilresa.panel_api.async_overview_snapshot", snapshot
+    )
+    return seen
+
+
+def test_overview_is_built_in_the_language_the_panel_asks_for(monkeypatch) -> None:
+    """A user who chose English sees English, whatever the instance speaks."""
+    seen = _record_languages(monkeypatch)
+
+    ws_overview(
+        _hass(), _connection(), {"id": 1, "type": TYPE_OVERVIEW, "language": "en"}
+    )
+    # An older panel script sends no language: the instance language applies.
+    ws_overview(_hass(), _connection(), {"id": 2, "type": TYPE_OVERVIEW})
+
+    assert seen == ["en", None]
+
+
+def test_every_push_of_a_subscription_keeps_its_language(monkeypatch) -> None:
+    seen = _record_languages(monkeypatch)
+    captured = {}
+    monkeypatch.setattr(
+        "custom_components.ikea_bilresa.panel_api.async_dispatcher_connect",
+        lambda _h, signal, target: captured.setdefault(signal, target) or MagicMock(),
+    )
+    monkeypatch.setattr(
+        "custom_components.ikea_bilresa.panel_api.websocket_api.event_message",
+        lambda mid, payload: {"id": mid, "event": payload},
+    )
+
+    ws_overview_subscribe(
+        _hass(),
+        _connection(),
+        {"id": 5, "type": TYPE_OVERVIEW_SUBSCRIBE, "language": "en"},
+    )
+    captured[SIGNAL_CONNECTION]()
+
+    assert seen == ["en", "en"]

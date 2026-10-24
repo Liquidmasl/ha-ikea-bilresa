@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning 2.0.0](https://semver.org/spec/
 
 ## [Unreleased]
 
+### Fixed
+- **The panel speaks the language of the user looking at it.** It used the
+  Home Assistant instance's language, so a user who had chosen English in
+  their profile on a Czech instance saw a Czech panel inside an English
+  interface. Every language now ships with the panel, which picks the user's
+  own (falling back from a regional tag such as `en-GB` to `en`, and to the
+  instance's language when the panel does not speak the user's). The gesture
+  and action names the server builds follow the same choice, and switching
+  language in the profile takes effect without a reload.
+- Durations in the live test use the user's number format (`2,25 s` in Czech);
+  they were always formatted in English.
+
 ## [0.6.0] - 2026-10-18
 
 The first stable release since 0.5.0. Everything below this section was
