@@ -17,7 +17,7 @@ stupňovité ovládání, nikoli o skutečně analogově plynulé scrollování.
 Dvoutlačítko získává samostatné event entity, propojení, spouštěče automatizací
 a stejný panel BILRESA.
 
-> **Stav:** poslední stabilní vydání je **v0.6.0**. Přidává dvoutlačítko
+> **Stav:** poslední stabilní vydání je **v0.6.1**. Přidává dvoutlačítko
 > BILRESA, panel BILRESA, další cíle propojení a spouštěče automatizací pro
 > každé gesto. Vyžaduje Home Assistant 2026.8 nebo novější a nahrazuje dřívější
 > spouštěče zařízení; před přechodem z 0.5.x si přečtěte poznámky k přechodu v

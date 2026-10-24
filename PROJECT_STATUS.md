@@ -12,6 +12,31 @@ The dated entries below are preserved as a historical implementation and testing
 
 ---
 
+
+## Fix release 0.6.1: the panel follows the user's language (2026-10-24)
+
+Status: **Code + tests + preview; released as stable 0.6.1 from `main`.**
+
+The owner, preparing a Reddit post, found Czech text in the panel. Nothing was
+hard-coded: the panel and the gesture/action labels built by the server used
+`hass.config.language` (the instance's), so a user who had chosen English in
+their profile on a Czech instance saw a Czech panel inside an English UI.
+
+Fix: the panel config carries every language (`labels_by_language`); the panel
+picks `hass.language` (base-tag fallback, then the instance's) and sends it
+with `ikea_bilresa/overview` and `.../overview/subscribe`, which take an
+optional `language`; a language switch resubscribes. `language` and `labels`
+stay for a cached older script. Live-test durations now use the user's number
+format (`_language` had only ever been set by a test). Checked: ruff, mypy,
+492 Python and 45 frontend tests; preview with `lang=en&instance=cs` showed no
+Czech word in the overview or the detail and the requests carried `en`.
+
+Numbering, decided by the owner: the fix is stable **0.6.1** (0.6.0 + this);
+the redesign published as `0.6.1-rc.1/rc.2` continues as **0.7.0** on
+`agent/panel-0.6.1`, which also carries this fix (cherry-picked as `ea74fee`).
+The owner's instance still runs `0.6.1-rc.2`; HACS will offer 0.6.1 as an
+update there, which would drop the new layout.
+
 ## Pull request 8: contributor answered; measurement recorded (2026-10-06)
 
 Status: **Docs only.** cassus replied twice on pull request 8 (2026-10-05 and

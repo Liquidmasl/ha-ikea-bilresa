@@ -13,7 +13,7 @@ reports scroll input in batches, so this is responsive stepped control rather
 than truly analog-continuous scrolling. The dual button gains independent event
 entities, control bindings, automation triggers and the same BILRESA panel.
 
-> **Status:** latest stable release **v0.6.0**. It adds the BILRESA dual
+> **Status:** latest stable release **v0.6.1**. It adds the BILRESA dual
 > button, the BILRESA panel, more binding targets and automation triggers for
 > every gesture. It needs Home Assistant 2026.8 or newer and replaces the old
 > device triggers; read the upgrade notes in [CHANGELOG.md](CHANGELOG.md) and
