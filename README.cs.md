@@ -17,17 +17,18 @@ stupňovité ovládání, nikoli o skutečně analogově plynulé scrollování.
 Dvoutlačítko získává samostatné event entity, propojení, spouštěče automatizací
 a stejný panel BILRESA.
 
-> **Stav:** poslední stabilní vydání je **v0.6.0**. Přidává dvoutlačítko
-> BILRESA, panel BILRESA, další cíle propojení a spouštěče automatizací pro
-> každé gesto. Vyžaduje Home Assistant 2026.8 nebo novější a nahrazuje dřívější
-> spouštěče zařízení; před přechodem z 0.5.x si přečtěte poznámky k přechodu v
-> [CHANGELOG.md](CHANGELOG.md) a udělejte zálohu.
+> **Stav:** poslední stabilní vydání je **v0.6.1**, tedy 0.6.0 s opravou: panel
+> mluví jazykem, který si každý uživatel zvolil ve svém profilu. Řada 0.6
+> přidává dvoutlačítko BILRESA, panel BILRESA, další cíle propojení a spouštěče
+> automatizací pro každé gesto. Vyžaduje Home Assistant 2026.8 nebo novější a
+> nahrazuje dřívější spouštěče zařízení; před přechodem z 0.5.x si přečtěte
+> poznámky k přechodu v [CHANGELOG.md](CHANGELOG.md) a udělejte zálohu.
 >
-> **Stav ověření:** `v0.6.0` je poslední stabilní vydání. Novější `v0.6.1-rc.2`
-> je předběžné vydání pouze se změnami rozložení panelu; automatické kontroly a
-> lokální vykreslení prošly, změny ale ještě nebyly ověřeny v reálném Home
-> Assistantu. Některé kombinace zařízení a gest stále čekají na hardwarové
-> ověření; aktuální checklist je v [docs/HARDWARE_TEST.md](docs/HARDWARE_TEST.md).
+> **Stav ověření:** předběžná vydání `v0.6.1-rc.1` a `v0.6.1-rc.2` obsahují
+> přepracované rozložení panelu, které ve stabilním vydání není; tato práce
+> pokračuje jako 0.7.0. Některé kombinace zařízení a gest stále čekají na
+> hardwarové ověření; aktuální checklist je v
+> [docs/HARDWARE_TEST.md](docs/HARDWARE_TEST.md).
 >
 > Plán kolečka je v [docs/ROADMAP.md](docs/ROADMAP.md), plán dvoutlačítka v
 > [docs/ROADMAP_BUTTON.md](docs/ROADMAP_BUTTON.md).

@@ -6,8 +6,10 @@ and field schema, and a synthetic home. Serve the folder and open it:
     python tools/panel_preview/build.py
     python -m http.server 8765 --bind 127.0.0.1 --directory tools/panel_preview/out
 
-Query parameters: ``lang=cs`` (default ``en``), ``dark=1``, ``narrow=1`` (no
-sidebar, phone layout), ``inset=16`` (a theme that pads the panel),
+Query parameters: ``lang=cs`` (the viewing user's language, default ``en``),
+``instance=cs`` (the Home Assistant instance's language, default ``lang``),
+``dark=1``, ``narrow=1`` (no sidebar, phone layout),
+``inset=16`` (a theme that pads the panel),
 ``open=<wheel key>`` with ``view=channels|buttons|live|diagnostics``, and
 ``edit=<n>`` to open the editor of channel or button ``n``.
 
@@ -375,6 +377,8 @@ __PANEL_JS__
 <script type="module">
 const params = new URLSearchParams(location.search);
 const lang = params.get("lang") === "cs" ? "cs" : "en";
+// The instance language; `lang` is the viewing user's.
+const instance = params.get("instance") === "cs" ? "cs" : lang;
 document.documentElement.lang = lang;
 if (params.get("dark")) document.body.classList.add("dark");
 const narrow = Boolean(params.get("narrow"));
@@ -390,7 +394,7 @@ const hass = {
   callWS: async (message) => {
     calls.push(message);
     if (message.type === "ikea_bilresa/overview") {
-      return structuredClone(SNAPSHOTS[lang]);
+      return structuredClone(SNAPSHOTS[message.language || instance]);
     }
     return { ok: true };
   },
@@ -403,7 +407,14 @@ const hass = {
   },
 };
 const panel = document.createElement("ikea-bilresa-panel");
-panel.panel = { config: { labels: LABELS[lang], schema: SCHEMA } };
+panel.panel = {
+  config: {
+    language: instance,
+    labels: LABELS[instance],
+    labels_by_language: LABELS,
+    schema: SCHEMA,
+  },
+};
 panel.narrow = narrow;
 if (params.get("open")) {
   panel._open = params.get("open");

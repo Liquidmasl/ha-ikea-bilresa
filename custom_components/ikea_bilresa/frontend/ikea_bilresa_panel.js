@@ -1666,7 +1666,14 @@ class IkeaBilresaPanel extends HTMLElement {
   }
 
   set hass(hass) {
+    const previous = this._lang();
     this._hass = hass;
+    if (this._started && this._lang() !== previous) {
+      // The user switched language in their profile: labels change at once, and
+      // the snapshot (whose labels the server builds) is fetched again.
+      this._retry();
+      return;
+    }
     if (!this._started) {
       this._started = true;
       this._render();
@@ -1685,8 +1692,21 @@ class IkeaBilresaPanel extends HTMLElement {
     this._panel = panel;
   }
 
+  // The viewing user's language, matched to one the panel speaks: "en-GB"
+  // falls back to "en", and a language it does not speak to the instance's.
+  _lang() {
+    const config = this._panel?.config || {};
+    const available = Object.keys(config.labels_by_language || {});
+    const wanted = String(this._hass?.language || "").toLowerCase();
+    if (available.includes(wanted)) return wanted;
+    const base = wanted.split("-", 1)[0];
+    if (available.includes(base)) return base;
+    return config.language || "en";
+  }
+
   _t(key, placeholders) {
-    const labels = this._panel?.config?.labels || {};
+    const config = this._panel?.config || {};
+    const labels = config.labels_by_language?.[this._lang()] || config.labels || {};
     let value = labels[key];
     if (value === undefined) return key;
     if (placeholders) {
@@ -1720,16 +1740,27 @@ class IkeaBilresaPanel extends HTMLElement {
   }
 
   async _connect() {
+    // A language switch reconnects while an earlier connect may still be in
+    // flight. Each connect takes a number; one that is no longer the latest
+    // drops its result and closes its own subscription, so an answer in the old
+    // language never overwrites the new one and no subscription is orphaned.
+    const epoch = (this._connectEpoch = (this._connectEpoch || 0) + 1);
+    const stale = () => epoch !== this._connectEpoch;
     this._error = null;
     try {
-      this._snapshot = await this._hass.callWS({ type: OVERVIEW });
+      const snapshot = await this._hass.callWS({
+        type: OVERVIEW,
+        language: this._lang(),
+      });
+      if (stale()) return;
+      this._snapshot = snapshot;
       this._render();
     } catch (err) {
-      this._fail(err);
+      if (!stale()) this._fail(err);
       return;
     }
     try {
-      this._unsub = await this._hass.connection.subscribeMessage(
+      const unsub = await this._hass.connection.subscribeMessage(
         (snapshot) => {
           this._snapshot = snapshot;
           if (
@@ -1744,9 +1775,15 @@ class IkeaBilresaPanel extends HTMLElement {
           }
           this._render();
         },
-        { type: OVERVIEW_SUBSCRIBE },
+        { type: OVERVIEW_SUBSCRIBE, language: this._lang() },
       );
+      if (stale()) {
+        unsub();
+        return;
+      }
+      this._unsub = unsub;
     } catch (err) {
+      if (stale()) return;
       // The existing snapshot remains useful; only its automatic updates stopped.
       this._error = this._message(err);
       this._render();
@@ -1773,6 +1810,9 @@ class IkeaBilresaPanel extends HTMLElement {
     this._error = null;
     this._render();
     await this._connect();
+    // A language switch reconnects with the Live test open; without this the
+    // view kept saying it was listening while no gesture arrived.
+    if (this._view === "live" && this._open && this._snapshot) this._startActivity();
   }
 
   connectedCallback() {
@@ -2737,7 +2777,10 @@ class IkeaBilresaPanel extends HTMLElement {
   }
 
   async _refreshSnapshot() {
-    this._snapshot = await this._hass.callWS({ type: OVERVIEW });
+    this._snapshot = await this._hass.callWS({
+      type: OVERVIEW,
+      language: this._lang(),
+    });
   }
 
   async _saveBinding(wheel, control) {
@@ -3700,7 +3743,7 @@ class IkeaBilresaPanel extends HTMLElement {
     ) {
       return label;
     }
-    const seconds = new Intl.NumberFormat(this._language || "en", {
+    const seconds = new Intl.NumberFormat(this._hass?.language || "en", {
       maximumFractionDigits: 2,
     }).format(milliseconds / 1000);
     return `${label} · ${this._t("gesture_observed_duration", {

@@ -95,6 +95,31 @@ async def test_registers_panel_with_a_cache_busted_module_url(monkeypatch) -> No
     )
 
 
+async def test_panel_ships_every_language_so_it_can_follow_the_user(
+    monkeypatch,
+) -> None:
+    """A user's language lives in their browser; the panel picks from all of them.
+
+    Until 0.6.0 only the instance language shipped, so a user who set English in
+    their profile on a Czech instance saw a Czech panel inside an English UI.
+    """
+    hass = _hass()
+    hass.config.language = "cs"
+    registrar = _patch(monkeypatch, hass)
+
+    assert await async_setup_panel(hass) is True
+
+    config = registrar.await_args.kwargs["config"]
+    assert set(config["labels_by_language"]) == {"en", "cs"}
+    assert (
+        config["labels_by_language"]["en"]["add_binding"]
+        != (config["labels_by_language"]["cs"]["add_binding"])
+    )
+    # Kept for a panel script cached from before this key existed.
+    assert config["language"] == "cs"
+    assert config["labels"] == config["labels_by_language"]["cs"]
+
+
 async def test_missing_asset_does_not_break_setup(monkeypatch) -> None:
     """A panel that cannot be served degrades to no panel, never to a failure."""
     hass = _hass(asset_exists=False)

@@ -13,16 +13,16 @@ reports scroll input in batches, so this is responsive stepped control rather
 than truly analog-continuous scrolling. The dual button gains independent event
 entities, control bindings, automation triggers and the same BILRESA panel.
 
-> **Status:** latest stable release **v0.6.0**. It adds the BILRESA dual
-> button, the BILRESA panel, more binding targets and automation triggers for
-> every gesture. It needs Home Assistant 2026.8 or newer and replaces the old
-> device triggers; read the upgrade notes in [CHANGELOG.md](CHANGELOG.md) and
-> take a backup before upgrading from 0.5.x.
+> **Status:** latest stable release **v0.6.1**, which is 0.6.0 plus a fix: the
+> panel now speaks the language each user chose in their profile. The 0.6 line
+> adds the BILRESA dual button, the BILRESA panel, more binding targets and
+> automation triggers for every gesture. It needs Home Assistant 2026.8 or newer
+> and replaces the old device triggers; read the upgrade notes in
+> [CHANGELOG.md](CHANGELOG.md) and take a backup before upgrading from 0.5.x.
 >
-> **Testing status:** `v0.6.0` is the latest stable release. The newer
-> `v0.6.1-rc.2` is a pre-release for panel-layout changes only; its automated
-> checks and local renders passed, but it has not yet been tested in a real
-> Home Assistant instance. Hardware validation is also incomplete for some
+> **Testing status:** the pre-releases `v0.6.1-rc.1` and `v0.6.1-rc.2` carry a
+> redesigned panel layout that is not in the stable release; that work
+> continues as 0.7.0. Hardware validation is incomplete for some
 > device/gesture combinations; see [docs/HARDWARE_TEST.md](docs/HARDWARE_TEST.md)
 > for the current checklist.
 

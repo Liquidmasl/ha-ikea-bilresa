@@ -2,15 +2,40 @@
 
 **Current snapshot — reviewed 2026-10-24**
 
-- **Latest stable release:** [`v0.6.0`](https://github.com/Vituhlos/ha-ikea-bilresa/releases/tag/v0.6.0), published 2026-10-18.
-- **Latest published pre-release:** [`v0.6.1-rc.2`](https://github.com/Vituhlos/ha-ikea-bilresa/releases/tag/v0.6.1-rc.2), published 2026-10-18. It changes the BILRESA panel layout only. Automated checks and local rendering passed, but the release notes explicitly say the change has **not yet been observed in a real Home Assistant instance**.
-- **Default branch:** `main` still declares version `0.6.0` in the integration manifest. Do not describe `0.6.1-rc.2` as a stable release.
+- **Latest stable release:** [`v0.6.1`](https://github.com/Vituhlos/ha-ikea-bilresa/releases/tag/v0.6.1), 2026-10-24: 0.6.0 plus the fix that makes the panel follow each user's language (PR #10). Before that, [`v0.6.0`](https://github.com/Vituhlos/ha-ikea-bilresa/releases/tag/v0.6.0), 2026-10-18.
+- **Development line:** the redesigned panel published as the pre-releases [`v0.6.1-rc.1`](https://github.com/Vituhlos/ha-ikea-bilresa/releases/tag/v0.6.1-rc.1) and [`v0.6.1-rc.2`](https://github.com/Vituhlos/ha-ikea-bilresa/releases/tag/v0.6.1-rc.2) is **not** in 0.6.1; it continues as 0.7.0 on branch `agent/panel-0.6.1`, which also carries the language fix. The owner saw rc.1 in his Home Assistant; rc.2 is deployed there but not yet confirmed by him.
+- **Default branch:** `main` declares version `0.6.1` in the integration manifest. Do not describe any `0.6.1-rc.*` pre-release as a stable release.
 - **Minimum Home Assistant Core:** 2026.8.0. Upgrading from 0.5.x has breaking changes: old device triggers were removed, and first startup can remove duplicate BILRESA device-registry entries. Users should back up before upgrading and follow [CHANGELOG.md](CHANGELOG.md).
 - **Validation:** the project has automated tests and some real-device/real-Home-Assistant checks, but the hardware checklist still contains open items. Do not claim that every gesture, device variant, firmware or configuration has been fully validated. See [docs/HARDWARE_TEST.md](docs/HARDWARE_TEST.md) for the authoritative checklist.
 
 The dated entries below are preserved as a historical implementation and testing log. Their status lines and “single best next action” notes describe the state at the time they were written; they are not current release status. Use this snapshot, [CHANGELOG.md](CHANGELOG.md), and the hardware checklist for current information.
 
 ---
+
+
+## Fix release 0.6.1: the panel follows the user's language (2026-10-24)
+
+Status: **Code + tests + preview; released as stable 0.6.1 from `main` via PR #10.**
+
+The owner, preparing a Reddit post, found Czech text in the panel. Nothing was
+hard-coded: the panel and the gesture/action labels built by the server used
+`hass.config.language` (the instance's), so a user who had chosen English in
+their profile on a Czech instance saw a Czech panel inside an English UI.
+
+Fix: the panel config carries every language (`labels_by_language`); the panel
+picks `hass.language` (base-tag fallback, then the instance's) and sends it
+with `ikea_bilresa/overview` and `.../overview/subscribe`, which take an
+optional `language`; a language switch resubscribes. `language` and `labels`
+stay for a cached older script. Live-test durations now use the user's number
+format (`_language` had only ever been set by a test). Checked: ruff, mypy,
+492 Python and 45 frontend tests; preview with `lang=en&instance=cs` showed no
+Czech word in the overview or the detail and the requests carried `en`.
+
+Numbering, decided by the owner: the fix is stable **0.6.1** (0.6.0 + this);
+the redesign published as `0.6.1-rc.1/rc.2` continues as **0.7.0** on
+`agent/panel-0.6.1`, which also carries this fix (cherry-picked as `ea74fee`).
+The owner's instance still runs `0.6.1-rc.2`; HACS will offer 0.6.1 as an
+update there, which would drop the new layout.
 
 ## Pull request 8: contributor answered; measurement recorded (2026-10-06)
 
