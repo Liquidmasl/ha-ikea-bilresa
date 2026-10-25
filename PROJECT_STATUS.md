@@ -3,6 +3,44 @@
 Last updated: **2026-10-04 by Claude Code**
 
 
+## Binding editor rework on top of the 0.7.0 panel (2026-10-25)
+
+Status: **Code + tests + checked on a real Home Assistant (contributor's
+instance). No save through the new editor and no hardware press observed; not
+released.** Branch `ui/editor-gesture-rows` on `Liquidmasl/ha-ikea-bilresa`,
+based on this branch (`agent/panel-0.6.1`); offered upstream as a pull request.
+
+What changed (`frontend/ikea_bilresa_panel.js`, `panel_strings.py`, tests):
+
+- Editor: one section per gesture (rotation, short, double, triple press,
+  hold), card-wide hairlines, labels above every field. "Cycle scenes" is a
+  short-press choice (derived from a non-empty `scenes`; stored data
+  unchanged). Double/triple press choose toggle or no action. A wheel's hold
+  ramp hides the unused hold target. The short-press response moved from
+  "Advanced" to Short press and dims the gestures it rules out; rotation
+  limits sit behind "More rotation settings"; "Advanced options" is gone.
+- Header: Save and Discard replace Edit in one grid cell. Discard is
+  two-stage with unsaved changes (0.5 s double-click guard, 4 s timeout).
+- Read view: gesture/action/target columns, no "add an action" row, channel
+  LED dots, dual-button outline with a dot on the configured half; a
+  switched-off channel fades and shows its note on the summary line.
+- `validation_target_required` / `validation_ramp_requires_light` now have
+  panel strings.
+
+Validation: `ruff format --check`, `ruff check`, `node --check`,
+`node --test tests/panel_frontend.test.mjs tests/iconset_frontend.test.mjs`
+(53 passed), `pytest` (489 passed). `mypy` reports 2 errors in
+`device_link.py` and `legacy_triggers.py`, unchanged by this work. Looked at
+in Home Assistant 2026.10.3 (light theme, desktop and 412 px) with drafts
+only.
+
+Known gaps: the back arrow, switching devices and "Configure" from the live
+test still close an editor with unsaved changes without asking. A Czech
+speaker should read the new Czech strings.
+
+**Single best next action:** the owner reviews the pull request; then a save
+through the new editor and a press on a physical BILRESA.
+
 ## Stable 0.6.1 released from `main`; this branch continues as 0.7.0 (2026-10-24)
 
 `v0.6.1` (PR #10, merge `514811a`, CI run `40132322918`) is 0.6.0 plus the fix
