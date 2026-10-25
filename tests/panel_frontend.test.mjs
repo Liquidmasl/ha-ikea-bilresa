@@ -733,6 +733,70 @@ test("scenes keep an order that can be changed", () => {
   assert.deepEqual(panel._editorData.scenes, ["scene.c", "scene.b", "scene.d"]);
 });
 
+test("the editor shows scene cycling as the short press it replaces", () => {
+  const panel = newPanel();
+  const stored = {
+    click_action: "off",
+    scenes: ["scene.a"],
+    double_press_target: "light.a",
+  };
+  panel._loadEditor(false, stored);
+
+  assert.deepEqual(panel._editorChoices, {
+    click_action: "scenes",
+    double_press: "toggle",
+    triple_press: "none",
+  });
+  assert.equal(panel._editorData.click_action, "off");
+  // The draft keeps its own copy: editing it must not touch the snapshot.
+  panel._editorData.scenes.push("scene.b");
+  assert.deepEqual(stored.scenes, ["scene.a"]);
+
+  panel._loadEditor(true, { click_action: "on" });
+  assert.equal(panel._editorChoices.click_action, "on");
+  assert.equal(panel._editorData.scenes, undefined);
+});
+
+test("leaving a press choice drops what only that choice used", () => {
+  const panel = newPanel();
+  panel._loadEditor(false, {
+    click_action: "off",
+    scenes: ["scene.a", "scene.b"],
+    double_press_target: "light.a",
+  });
+  panel._editorErrors = { scenes: "x", double_press_target: "y" };
+
+  panel._chooseGesture("click_action", "toggle");
+  assert.equal(panel._editorData.click_action, "toggle");
+  assert.deepEqual(panel._editorData.scenes, []);
+
+  panel._chooseGesture("double_press", "none");
+  assert.equal("double_press_target" in panel._editorData, false);
+  assert.deepEqual(panel._editorErrors, {});
+
+  // Choosing scenes again keeps the stored action; the runtime ignores it.
+  panel._chooseGesture("click_action", "scenes");
+  assert.equal(panel._editorChoices.click_action, "scenes");
+  assert.equal(panel._editorData.click_action, "toggle");
+});
+
+test("an empty scene cycle or toggle is caught before saving", async () => {
+  const panel = newPanel();
+  let sent = 0;
+  panel._hass = { callWS: async () => { sent += 1; return { ok: true }; } };
+  panel._loadEditor(false, { target: "light.a" });
+  panel._chooseGesture("click_action", "scenes");
+  panel._chooseGesture("triple_press", "toggle");
+
+  await panel._saveBinding({ key: "wheel-a", variant: "wheel" }, { channel: 1 });
+
+  assert.equal(sent, 0);
+  assert.deepEqual(panel._editorErrors, {
+    scenes: "scenes_required",
+    triple_press_target: "target_required",
+  });
+});
+
 test("without Home Assistant's components the panel builds no ha-selector", () => {
   const panel = newPanel();
 

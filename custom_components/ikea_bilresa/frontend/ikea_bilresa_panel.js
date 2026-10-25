@@ -534,9 +534,10 @@ const STYLES = `
   .subpage-meta-copy { flex: 1 1 auto; min-inline-size: 0; }
   .control-stack { display: grid; gap: var(--_space-4); }
   .control-card {
+    --_card-pad: var(--_space-6);
     min-inline-size: 0;
     container-type: inline-size;
-    padding: var(--_space-6);
+    padding: var(--_card-pad);
     border: var(--ha-card-border-width, 1px) solid var(--_border);
     border-radius: var(--_radius);
     background: var(--_card);
@@ -819,7 +820,8 @@ const STYLES = `
     color: var(--error-color, var(--_ink));
   }
   .channel-detail .binding-form {
-    padding: var(--_space-4) 0 0;
+    margin-inline: calc(-1 * var(--_card-pad));
+    padding: var(--_space-4) var(--_card-pad) 0;
     border-block-start: 1px solid var(--_divider);
   }
   .detail-card {
@@ -941,14 +943,22 @@ const STYLES = `
   }
   /* A hairline between groups, never a box around each one: the editor already
      sits on a card, and nesting cards is what made this panel read as a form
-     builder rather than a control surface. */
-  .form-section + .form-section {
+     builder rather than a control surface. The line runs from card edge to
+     card edge, as between Home Assistant's blueprint input sections, so it
+     outranks the shorter lines of a scene list inside one group. */
+  .form-section + .form-section,
+  .advanced {
+    margin-inline: calc(-1 * var(--_card-pad, 0px));
+    padding-inline: var(--_card-pad, 0px);
     border-block-start: 1px solid var(--_divider);
     padding-block-start: var(--_space-4);
   }
   .form-section-title {
+    display: flex;
+    align-items: center;
+    gap: var(--_space-3);
     margin: 0 0 var(--_space-3);
-    font-size: var(--ha-font-size-m, 14px);
+    font-size: var(--ha-font-size-l, 16px);
     font-weight: var(--ha-font-weight-medium, 500);
     color: var(--_ink);
   }
@@ -1016,6 +1026,8 @@ const STYLES = `
   .scene-button svg { inline-size: 20px; block-size: 20px; fill: currentColor; }
   .scene-button:disabled { opacity: 0.35; cursor: default; }
   .scene-add { display: grid; gap: var(--_space-1); }
+  .scene-add-row { padding-block: var(--_space-2) 0; border-block-end: 0; }
+  .scene-add-row > * { flex: 1 1 auto; }
   .field input,
   .field select {
     min-inline-size: 0;
@@ -1050,10 +1062,7 @@ const STYLES = `
     border: 1px solid var(--_border);
     border-radius: var(--ha-border-radius-md, 8px);
   }
-  .advanced {
-    border-block-start: 1px solid var(--_divider);
-    padding-block-start: var(--_space-3);
-  }
+  .advanced { padding-block-start: var(--_space-3); }
   .advanced summary {
     min-block-size: 44px;
     display: flex;
@@ -1443,6 +1452,7 @@ class IkeaBilresaPanel extends HTMLElement {
     this._editingChannel = null;
     this._editingKind = null;
     this._editorData = null;
+    this._editorChoices = {};
     this._editorBinding = null;
     this._editorErrors = {};
     this._editorBusy = false;
@@ -2087,6 +2097,7 @@ class IkeaBilresaPanel extends HTMLElement {
     this._editingChannel = null;
     this._editingKind = null;
     this._editorData = null;
+    this._editorChoices = {};
     this._editorBinding = null;
     this._editorErrors = {};
     this._editorBusy = false;
@@ -2094,28 +2105,69 @@ class IkeaBilresaPanel extends HTMLElement {
     this._deleteConfirm = false;
   }
 
-  _defaultBindingFor(device) {
-    return device.variant === "dual_button"
-      ? DEFAULT_BUTTON_BINDING
-      : DEFAULT_BINDING;
-  }
-
   _startEditor(device, control) {
     this._editingChannel = this._controlNumber(device, control);
     this._editingKind =
       device.variant === "dual_button" ? "button" : "channel";
     this._editorBinding = control.binding || null;
-    this._editorData = {
-      ...this._defaultBindingFor(device),
-      ...(control.binding?.data || {}),
-      ...(device.variant === "dual_button"
-        ? {}
-        : { scenes: [...(control.binding?.data?.scenes || [])] }),
-    };
+    this._loadEditor(device.variant === "dual_button", control.binding?.data);
     this._editorErrors = {};
     this._editorMessage = null;
     this._deleteConfirm = false;
     this._render();
+  }
+
+  // Two press choices are not stored as such: "cycle scenes" is a short press
+  // with scenes, and a double or triple press toggles exactly when it has a
+  // target. The choice is kept beside the draft so a gesture can be switched
+  // to either before its scene list or target is filled in.
+  _loadEditor(isButton, data) {
+    this._editorData = {
+      ...(isButton ? DEFAULT_BUTTON_BINDING : DEFAULT_BINDING),
+      ...(data || {}),
+    };
+    if (!isButton) this._editorData.scenes = [...(data?.scenes || [])];
+    this._editorChoices = {
+      click_action: this._editorData.scenes?.length
+        ? "scenes"
+        : this._editorData.click_action,
+      double_press: this._editorData.double_press_target ? "toggle" : "none",
+      triple_press: this._editorData.triple_press_target ? "toggle" : "none",
+    };
+  }
+
+  // What the server cannot check, because the draft it receives no longer
+  // says it: a chosen scene cycle or toggle that was left empty.
+  _choiceErrors() {
+    const errors = {};
+    const data = this._editorData;
+    const choices = this._editorChoices;
+    if (choices.click_action === "scenes" && !data.scenes?.length) {
+      errors.scenes = "scenes_required";
+    }
+    if (choices.double_press === "toggle" && !data.double_press_target) {
+      errors.double_press_target = "target_required";
+    }
+    if (choices.triple_press === "toggle" && !data.triple_press_target) {
+      errors.triple_press_target = "target_required";
+    }
+    return errors;
+  }
+
+  // Leaving scenes or a toggle drops what only that choice used, so what is
+  // saved is what the form shows. Choosing "cycle scenes" leaves the stored
+  // short-press action alone: the runtime ignores it while scenes exist.
+  _chooseGesture(name, next) {
+    this._editorChoices[name] = next;
+    if (name === "click_action") {
+      this._editorChanged("scenes");
+      if (next === "scenes") return;
+      this._editorData.click_action = next;
+      if (this._editorData.scenes) this._editorData.scenes = [];
+    } else {
+      this._editorChanged(`${name}_target`);
+      if (next === "none") delete this._editorData[`${name}_target`];
+    }
   }
 
   _entityRecords(domains) {
@@ -2216,13 +2268,22 @@ class IkeaBilresaPanel extends HTMLElement {
   }
 
   // The panel's own dropdown, used when Home Assistant's is not available.
-  _nativeSelect(wrap, id, label, help, options, { emptyLabel, value, onChange }) {
-    const labelNode = el("label", null, label);
-    labelNode.htmlFor = id;
-    wrap.appendChild(labelNode);
-    if (help) wrap.appendChild(el("span", "field-help", help));
+  _nativeSelect(
+    wrap,
+    id,
+    label,
+    help,
+    options,
+    { emptyLabel, value, onChange, hiddenLabel = false },
+  ) {
+    if (!hiddenLabel) {
+      const labelNode = el("label", null, label);
+      labelNode.htmlFor = id;
+      wrap.appendChild(labelNode);
+    }
     const select = el("select");
     select.id = id;
+    if (hiddenLabel) select.setAttribute("aria-label", label);
     if (emptyLabel !== undefined) {
       // An empty optional target does not always mean "nothing happens", so the
       // placeholder must say what leaving it empty actually does.
@@ -2240,15 +2301,23 @@ class IkeaBilresaPanel extends HTMLElement {
     select.value = value ?? "";
     select.addEventListener("change", () => onChange(select.value));
     wrap.appendChild(select);
+    // Help under the control, where Home Assistant's own selector puts it, so
+    // controls beside each other line up whatever their help text's length.
+    if (help) wrap.appendChild(el("span", "field-help", help));
     return select;
   }
 
-  _selectField(name, label, options, { help, wide = false } = {}) {
+  _selectField(
+    name,
+    label,
+    options,
+    { help, wide = false, value = this._editorData[name] ?? "", onChoose } = {},
+  ) {
     const wrap = this._field(wide);
     const id = this._fieldId(name);
-    const value = this._editorData[name] ?? "";
     const onChange = (next) => {
-      this._editorData[name] = next || undefined;
+      if (onChoose) onChoose(next);
+      else this._editorData[name] = next || undefined;
       this._editorChanged(name);
       this._render();
     };
@@ -2333,7 +2402,6 @@ class IkeaBilresaPanel extends HTMLElement {
     const labelNode = el("label", null, label);
     labelNode.htmlFor = id;
     wrap.appendChild(labelNode);
-    if (help) wrap.appendChild(el("span", "field-help", help));
     const row = el("div", "number-input");
     control = el("input");
     control.id = id;
@@ -2348,6 +2416,7 @@ class IkeaBilresaPanel extends HTMLElement {
     // The unit sits beside the value it qualifies, not in a line of help text.
     if (range.unit) row.appendChild(el("span", "number-unit", range.unit));
     wrap.appendChild(row);
+    if (help) wrap.appendChild(el("span", "field-help", help));
     return { wrap, control };
   }
 
@@ -2367,11 +2436,24 @@ class IkeaBilresaPanel extends HTMLElement {
     return wrap;
   }
 
-  _formSection(parent, title) {
-    // A title exists to tell two groups apart. A button binding has only one
-    // group, so titling it would repeat the editor's own heading.
+  // One section per gesture, in the order and with the glyphs of the
+  // gesture ledger above, so the editor reads as that ledger opened up.
+  _formSection(parent, gesture) {
     const section = el("section", "form-section");
-    if (title) section.appendChild(el("h4", "form-section-title", title));
+    const title = el("h4", "form-section-title");
+    title.id = `${this._fieldId(gesture)}-title`;
+    title.appendChild(gestureGlyph(gesture));
+    title.appendChild(
+      el(
+        "span",
+        null,
+        this._t(
+          gesture === "rotation" ? "section_rotation" : `binding_gesture_${gesture}`,
+        ),
+      ),
+    );
+    section.setAttribute("aria-labelledby", title.id);
+    section.appendChild(title);
     const grid = el("div", "form-grid");
     section.appendChild(grid);
     parent.appendChild(section);
@@ -2426,42 +2508,45 @@ class IkeaBilresaPanel extends HTMLElement {
   // Scene cycling follows the order of this list, so the list has to show an
   // order and let it be changed. A multi-select can do neither.
   _scenesField() {
-    const wrap = this._field(true);
+    // In the target column: the scenes are what a cycling short press acts on.
+    const wrap = this._field(false);
     wrap.appendChild(el("span", "field-label", this._t("field_scenes")));
     wrap.appendChild(el("span", "field-help", this._t("field_scenes_help")));
     const scenes = this._editorData.scenes || [];
-    if (scenes.length) {
-      const list = el("ol", "scene-list");
-      scenes.forEach((entityId, index) => {
-        const item = el("li", "scene-item");
-        item.appendChild(el("span", "scene-order", String(index + 1)));
-        item.appendChild(el("span", "scene-name", this._sceneName(entityId)));
-        const controls = el("span", "scene-controls");
-        controls.appendChild(
-          this._sceneButton("up", ICON.arrowUp, "scene_move_up", entityId, index === 0, () =>
-            this._sceneMove(index, -1),
-          ),
-        );
-        controls.appendChild(
-          this._sceneButton(
-            "down",
-            ICON.arrowDown,
-            "scene_move_down",
-            entityId,
-            index === scenes.length - 1,
-            () => this._sceneMove(index, 1),
-          ),
-        );
-        controls.appendChild(
-          this._sceneButton("remove", ICON.remove, "scene_remove", entityId, false, () =>
-            this._sceneRemove(index),
-          ),
-        );
-        item.appendChild(controls);
-        list.appendChild(item);
-      });
-      wrap.appendChild(list);
-    }
+    // "Add a scene" is the list's last row, so it reads as part of the list
+    // rather than as a field of its own beside it.
+    const list = el("ol", "scene-list");
+    scenes.forEach((entityId, index) => {
+      const item = el("li", "scene-item");
+      item.appendChild(el("span", "scene-order", String(index + 1)));
+      item.appendChild(el("span", "scene-name", this._sceneName(entityId)));
+      const controls = el("span", "scene-controls");
+      controls.appendChild(
+        this._sceneButton("up", ICON.arrowUp, "scene_move_up", entityId, index === 0, () =>
+          this._sceneMove(index, -1),
+        ),
+      );
+      controls.appendChild(
+        this._sceneButton(
+          "down",
+          ICON.arrowDown,
+          "scene_move_down",
+          entityId,
+          index === scenes.length - 1,
+          () => this._sceneMove(index, 1),
+        ),
+      );
+      controls.appendChild(
+        this._sceneButton("remove", ICON.remove, "scene_remove", entityId, false, () =>
+          this._sceneRemove(index),
+        ),
+      );
+      item.appendChild(controls);
+      list.appendChild(item);
+    });
+    const addRow = el("li", "scene-item scene-add-row");
+    list.appendChild(addRow);
+    wrap.appendChild(list);
     const id = `${this._fieldId("scenes")}-add`;
     const onChange = (next) => {
       this._sceneAdd(next);
@@ -2476,7 +2561,7 @@ class IkeaBilresaPanel extends HTMLElement {
       onChange,
     });
     if (add) {
-      wrap.appendChild(add);
+      addRow.appendChild(add);
     } else {
       const options = this._entityRecords(["scene"])
         .filter((state) => !scenes.includes(state.entity_id))
@@ -2489,8 +2574,9 @@ class IkeaBilresaPanel extends HTMLElement {
         emptyLabel: this._t("scene_add_placeholder"),
         value: "",
         onChange,
+        hiddenLabel: true,
       });
-      wrap.appendChild(shell);
+      addRow.appendChild(shell);
     }
     this._fieldErrorNode(wrap, "scenes", null);
     return wrap;
@@ -2505,6 +2591,13 @@ class IkeaBilresaPanel extends HTMLElement {
 
   async _saveBinding(wheel, control) {
     if (this._editorBusy) return;
+    const choiceErrors = this._choiceErrors();
+    if (Object.keys(choiceErrors).length) {
+      this._editorErrors = choiceErrors;
+      this._editorMessage = this._t("binding_validation_failed");
+      this._render();
+      return;
+    }
     this._editorBusy = true;
     this._editorErrors = {};
     this._editorMessage = null;
@@ -2525,10 +2618,10 @@ class IkeaBilresaPanel extends HTMLElement {
           this._editorMessage = this._t("binding_validation_failed");
         } else if (response.error === "conflict") {
           this._editorBinding = response.binding;
-          this._editorData = {
-            ...this._defaultBindingFor(wheel),
-            ...(response.binding?.data || {}),
-          };
+          this._loadEditor(
+            wheel.variant === "dual_button",
+            response.binding?.data,
+          );
           this._editorMessage = this._t("binding_conflict");
         } else {
           this._editorMessage = this._t(`binding_error_${response.error}`);
@@ -2543,10 +2636,10 @@ class IkeaBilresaPanel extends HTMLElement {
         (item) => this._controlNumber(refreshedWheel, item) === number,
       );
       this._editorBinding = refreshedControl?.binding || response.binding;
-      this._editorData = {
-        ...this._defaultBindingFor(wheel),
-        ...(this._editorBinding?.data || {}),
-      };
+      this._loadEditor(
+        wheel.variant === "dual_button",
+        this._editorBinding?.data,
+      );
       this._editorMessage = this._t("binding_saved");
     } catch (err) {
       this._editorMessage = this._t("binding_save_failed", {
@@ -2572,12 +2665,10 @@ class IkeaBilresaPanel extends HTMLElement {
       if (!response.ok) {
         if (response.error === "conflict") {
           this._editorBinding = response.binding;
-          this._editorData = {
-            ...(this._editingKind === "button"
-              ? DEFAULT_BUTTON_BINDING
-              : DEFAULT_BINDING),
-            ...(response.binding?.data || {}),
-          };
+          this._loadEditor(
+            this._editingKind === "button",
+            response.binding?.data,
+          );
           this._editorMessage = this._t("binding_conflict");
         } else {
           this._editorMessage = this._t(`binding_error_${response.error}`);
@@ -2635,7 +2726,7 @@ class IkeaBilresaPanel extends HTMLElement {
     const pressDomains = this._schema().press_target_domains;
 
     if (!isButton) {
-      const rotation = this._formSection(sections, this._t("section_rotation"));
+      const rotation = this._formSection(sections, "rotation");
       rotation.appendChild(
         this._selectField(
           "mode",
@@ -2665,25 +2756,36 @@ class IkeaBilresaPanel extends HTMLElement {
       );
     }
 
-    const button = this._formSection(
-      sections,
-      isButton ? null : this._t("section_button"),
-    );
-    button.appendChild(
+    // Every press gesture is its own section: its name once, then what it
+    // does and on what. Cycling scenes is one of the things a short press does,
+    // not a second setting beside it - the runtime lets scenes win, so the
+    // form must not show both.
+    const clickChoices = isButton
+      ? ["toggle", "on", "off", "none"]
+      : ["toggle", "on", "off", "scenes", "none"];
+    const shortPress = this._formSection(sections, "short_press");
+    shortPress.appendChild(
       this._selectField(
         "click_action",
-        this._t("field_click_action"),
-        ["toggle", "on", "off", "none"].map((action) => ({
+        this._t("gesture_action"),
+        clickChoices.map((action) => ({
           value: action,
           label: this._t(`click_${action}`),
         })),
+        {
+          value: this._editorChoices.click_action,
+          onChoose: (next) => this._chooseGesture("click_action", next),
+        },
       ),
     );
-    if (!isButton || this._editorData.click_action !== "none") {
-      button.appendChild(
+    const clickChoice = this._editorChoices.click_action;
+    if (clickChoice === "scenes") {
+      shortPress.appendChild(this._scenesField());
+    } else if (clickChoice !== "none") {
+      shortPress.appendChild(
         this._entityField(
           "click_target",
-          this._t("field_click_target"),
+          this._t("gesture_target"),
           pressDomains,
           {
             optional: !isButton,
@@ -2696,42 +2798,54 @@ class IkeaBilresaPanel extends HTMLElement {
         ),
       );
     }
-    if (!isButton) button.appendChild(this._scenesField());
-    // Double and triple press take a target but never an action, so each owns
-    // a full row instead of leaving a hole where an action select would be.
-    button.appendChild(
-      this._entityField(
-        "double_press_target",
-        this._t("field_double_target"),
-        pressDomains,
-        { optional: true, wide: true },
-      ),
-    );
-    if (!isButton) {
-      button.appendChild(
-        this._entityField(
-          "triple_press_target",
-          this._t("field_triple_target"),
-          pressDomains,
-          { optional: true, wide: true },
+    const multiPresses = isButton
+      ? ["double_press"]
+      : ["double_press", "triple_press"];
+    for (const press of multiPresses) {
+      const card = this._formSection(sections, press);
+      card.appendChild(
+        this._selectField(
+          press,
+          this._t("gesture_action"),
+          ["toggle", "none"].map((action) => ({
+            value: action,
+            label: this._t(`click_${action}`),
+          })),
+          {
+            value: this._editorChoices[press],
+            onChoose: (next) => this._chooseGesture(press, next),
+          },
         ),
       );
+      if (this._editorChoices[press] === "toggle") {
+        card.appendChild(
+          this._entityField(
+            `${press}_target`,
+            this._t("gesture_target"),
+            pressDomains,
+          ),
+        );
+      }
     }
-    button.appendChild(
+    const hold = this._formSection(sections, "hold");
+    hold.appendChild(
       this._selectField(
         "hold_action",
-        this._t("field_hold_action"),
+        this._t("gesture_action"),
         ["toggle", "ramp", "none"].map((action) => ({
           value: action,
           label: this._t(`hold_${action}`),
         })),
       ),
     );
-    if (this._editorData.hold_action !== "none") {
-      button.appendChild(
+    // A wheel ramps its rotation target, whatever the hold target says; only
+    // a dual button, which has no rotation, ramps the hold target.
+    const holdAction = this._editorData.hold_action;
+    if (holdAction !== "none" && (isButton || holdAction !== "ramp")) {
+      hold.appendChild(
         this._entityField(
           "hold_target",
-          this._t("field_hold_target"),
+          this._t("gesture_target"),
           this._editorData.hold_action === "ramp"
             ? this._schema().ramp_target_domains
             : pressDomains,
@@ -2740,7 +2854,7 @@ class IkeaBilresaPanel extends HTMLElement {
       );
     }
     if (isButton && this._editorData.hold_action === "ramp") {
-      button.appendChild(
+      hold.appendChild(
         this._selectField(
           "ramp_direction",
           this._t("field_ramp_direction"),

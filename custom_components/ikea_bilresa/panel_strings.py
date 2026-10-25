@@ -170,7 +170,7 @@ STRINGS: dict[str, dict[str, str]] = {
         ),
         "target_empty_is_rotation": "Leave empty to use the rotation target.",
         "scene_add": "Add a scene",
-        "scene_add_placeholder": "Choose a scene…",
+        "scene_add_placeholder": "Add a scene…",
         "scene_move_up": "Move {scene} up",
         "scene_move_down": "Move {scene} down",
         "scene_remove": "Remove {scene}",
@@ -179,28 +179,21 @@ STRINGS: dict[str, dict[str, str]] = {
         "field_transition": "Smoothing of large jumps",
         "field_min_brightness": "Minimum brightness",
         "field_max_brightness": "Maximum brightness",
-        "field_click_action": "Short press",
-        "field_click_target": "Short-press target",
         "field_button_response": "Button response",
-        # Double and triple press have no action of their own: they always
-        # toggle. The label says so, so the field is not read as a half-set
-        # pair beside short press and hold, which do choose an action.
-        "field_double_target": "Double press toggles",
-        "field_triple_target": "Triple press toggles",
-        "field_hold_action": "Hold",
-        "field_hold_target": "Hold target",
-        "field_ramp_direction": "Hold ramp direction",
+        "gesture_action": "Action",
+        "gesture_target": "Target",
+        "field_ramp_direction": "Ramp direction",
         "field_scenes": "Scenes",
         "field_scenes_help": (
             "Each short press activates the next scene, in this order."
         ),
         "section_rotation": "Rotation",
-        "section_button": "Button",
         "advanced_options": "Advanced options",
         "click_toggle": "Toggle target",
         "click_on": "Turn target on",
         "click_off": "Turn target off",
         "click_none": "No action",
+        "click_scenes": "Cycle scenes",
         "hold_toggle": "Toggle hold target",
         "hold_ramp": "Ramp rotation target",
         "hold_none": "No action",
@@ -253,6 +246,9 @@ STRINGS: dict[str, dict[str, str]] = {
             "Configure this control before testing it."
         ),
         "validation_invalid_value": "Choose or enter a valid value.",
+        "validation_target_required": "Choose a target.",
+        "validation_ramp_requires_light": "Ramping needs a light as the hold target.",
+        "validation_scenes_required": "Add at least one scene.",
         "validation_mode_target_mismatch": (
             "The selected rotation mode cannot control this entity."
         ),
@@ -566,7 +562,7 @@ STRINGS: dict[str, dict[str, str]] = {
             "Když pole necháte prázdné, použije se cíl otáčení."
         ),
         "scene_add": "Přidat scénu",
-        "scene_add_placeholder": "Vyberte scénu…",
+        "scene_add_placeholder": "Přidat scénu…",
         "scene_move_up": "Posunout scénu {scene} výš",
         "scene_move_down": "Posunout scénu {scene} níž",
         "scene_remove": "Odebrat scénu {scene}",
@@ -575,25 +571,21 @@ STRINGS: dict[str, dict[str, str]] = {
         "field_transition": "Vyhlazení velkých skoků",
         "field_min_brightness": "Minimální jas",
         "field_max_brightness": "Maximální jas",
-        "field_click_action": "Krátký stisk",
-        "field_click_target": "Cíl krátkého stisku",
         "field_button_response": "Odezva tlačítka",
-        "field_double_target": "Dvojitý stisk přepne",
-        "field_triple_target": "Trojitý stisk přepne",
-        "field_hold_action": "Podržení",
-        "field_hold_target": "Cíl podržení",
-        "field_ramp_direction": "Směr plynulé změny při podržení",
+        "gesture_action": "Akce",
+        "gesture_target": "Cíl",
+        "field_ramp_direction": "Směr plynulé změny",
         "field_scenes": "Scény",
         "field_scenes_help": (
             "Každý krátký stisk aktivuje další scénu v tomto pořadí."
         ),
         "section_rotation": "Otáčení",
-        "section_button": "Tlačítko",
         "advanced_options": "Pokročilé možnosti",
         "click_toggle": "Přepnout cíl",
         "click_on": "Zapnout cíl",
         "click_off": "Vypnout cíl",
         "click_none": "Bez akce",
+        "click_scenes": "Střídat scény",
         "hold_toggle": "Přepnout cíl podržení",
         "hold_ramp": "Plynule měnit cíl otáčení",
         "hold_none": "Bez akce",
@@ -645,6 +637,11 @@ STRINGS: dict[str, dict[str, str]] = {
             "Před testem nejdřív nastavte tento ovládací prvek."
         ),
         "validation_invalid_value": "Vyberte nebo zadejte platnou hodnotu.",
+        "validation_target_required": "Vyberte cíl.",
+        "validation_ramp_requires_light": (
+            "Plynulá změna vyžaduje jako cíl podržení světlo."
+        ),
+        "validation_scenes_required": "Přidejte alespoň jednu scénu.",
         "validation_mode_target_mismatch": (
             "Vybraný režim otáčení nemůže ovládat tuto entitu."
         ),

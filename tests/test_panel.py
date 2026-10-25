@@ -570,9 +570,11 @@ def test_dual_button_reuses_the_panel_shell_with_two_button_controls() -> None:
     assert '"button-list"' not in asset
     assert '"button-surface"' not in asset
     assert '["buttons", "live", "diagnostics"]' in views
-    assert "if (!isButton) button.appendChild(this._scenesField())" in form
-    assert "if (!isButton) {" in form
-    assert '"triple_press_target"' in form
+    # Scene cycling and triple press exist only on the wheel.
+    assert '? ["toggle", "on", "off", "none"]' in form
+    assert ': ["toggle", "on", "off", "scenes", "none"]' in form
+    assert '? ["double_press"]' in form
+    assert ': ["double_press", "triple_press"]' in form
     assert '"ramp_direction"' in form
 
 
@@ -606,8 +608,8 @@ def test_every_press_gesture_is_edited_beside_the_others() -> None:
     for field in (
         '"click_action"',
         '"click_target"',
-        '"double_press_target"',
-        '"triple_press_target"',
+        '"double_press"',
+        '"triple_press"',
         '"hold_action"',
         '"hold_target"',
     ):
@@ -621,8 +623,8 @@ def test_the_editor_follows_the_gesture_ledger_order() -> None:
         '"mode"',
         '"target"',
         '"click_action"',
-        '"double_press_target"',
-        '"triple_press_target"',
+        '"double_press"',
+        '"triple_press"',
         '"hold_action"',
     ]
     positions = [form.index(field) for field in order]
@@ -644,14 +646,19 @@ def test_advanced_keeps_only_set_once_options_and_pairs_the_limits() -> None:
     assert minimum < maximum < acceleration
 
 
-def test_a_gesture_without_an_action_takes_a_whole_row() -> None:
-    """Double and triple press choose a target only, so no half row is left."""
+def test_every_gesture_is_its_own_section() -> None:
+    """Rotation and each press gesture are peers, named once, as in the ledger.
+
+    A scene list and its "add" control must read as part of the short press,
+    not as siblings of the gesture after it.
+    """
     form = _binding_form_source()
 
-    for field in ('"double_press_target"', '"triple_press_target"'):
-        # the rest of that one _entityField call, whatever the formatter does
-        declaration = form.split(field, 1)[1].split("      ),", 1)[0]
-        assert "wide: true" in declaration, field
+    assert 'this._formSection(sections, "rotation")' in form
+    assert 'this._formSection(sections, "short_press")' in form
+    assert "this._formSection(sections, press)" in form
+    assert 'this._formSection(sections, "hold")' in form
+    assert form.count('this._t("gesture_action")') == 3
 
 
 def test_an_empty_wheel_short_press_target_says_what_it_falls_back_to() -> None:
@@ -668,13 +675,6 @@ def test_an_empty_wheel_short_press_target_says_what_it_falls_back_to() -> None:
     # A dual button has no rotation to fall back to, so it keeps the plain
     # placeholder and its own required-target behaviour.
     assert "isButton ? undefined :" in declaration
-
-
-def test_a_button_editor_has_no_section_title_to_repeat_itself() -> None:
-    """One group needs no heading; the editor's own title already says it."""
-    form = _binding_form_source()
-
-    assert 'isButton ? null : this._t("section_button")' in form
 
 
 def test_panel_detail_tabs_follow_the_aria_keyboard_contract() -> None:
