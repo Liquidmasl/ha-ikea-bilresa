@@ -504,7 +504,8 @@ def test_every_channel_is_its_own_card_on_one_page() -> None:
         assert gone not in asset
     # A switched-off channel says so on its card.
     assert 'card.dataset.state = "off"' in stacked
-    assert '"channel_off_note"' in stacked
+    # ...in its header, on the summary's line, so the card keeps its height.
+    assert '"channel_off_note"' in channel
     # Its switch sits on its card; there is no separate "Active channels" card.
     assert "tools.appendChild(this._channelSwitch(wheel, channel))" in channel
     assert "_activeChannelsSection" not in asset
@@ -521,8 +522,12 @@ def test_an_unconfigured_channel_stays_lighter_than_a_configured_one() -> None:
     # One compact head, like a configured channel's, with no ledger under it:
     # the 0.6.1-rc.1 heading, paragraph and primary button were a poster.
     assert "channel-empty" not in asset
-    empty_head = '.channel-detail[data-state="empty"] .channel-detail-head'
-    assert f"{empty_head} {{ margin-block-end: 0; }}" in asset
+    # ...until its editor opens, when the form's line needs the usual gap.
+    empty_head = (
+        '.channel-detail[data-state="empty"]:not([data-editing="true"])'
+        " .channel-detail-head {\n    margin-block-end: 0;"
+    )
+    assert empty_head in asset
     assert "min-block-size: 100%;" not in asset
 
     # Dimmed, never italic: HA does not italicise state, and an italic label is
@@ -596,15 +601,14 @@ def _binding_form_source() -> str:
 
 
 def test_every_press_gesture_is_edited_beside_the_others() -> None:
-    """Double and triple press belong with short press, not behind a disclosure.
+    """No catch-all "advanced" group: every field sits with what it belongs to.
 
-    The gesture ledger presents five equal gestures. Filing two of them under
-    "advanced options" contradicted that on the very next screen, and there is
-    no sense in which a double press is more advanced than a short one.
+    The gesture ledger presents equal gestures, and a disclosure at the foot
+    of the form read as the heading of the buttons below it.
     """
     form = _binding_form_source()
-    gestures, advanced = form.split('el("details", "advanced")', 1)
 
+    assert 'el("details", "advanced")' not in form
     for field in (
         '"click_action"',
         '"click_target"',
@@ -613,8 +617,7 @@ def test_every_press_gesture_is_edited_beside_the_others() -> None:
         '"hold_action"',
         '"hold_target"',
     ):
-        assert field in gestures, field
-        assert field not in advanced, field
+        assert field in form, field
 
 
 def test_the_editor_follows_the_gesture_ledger_order() -> None:
@@ -632,18 +635,25 @@ def test_the_editor_follows_the_gesture_ledger_order() -> None:
     assert positions == sorted(positions)
 
 
-def test_advanced_keeps_only_set_once_options_and_pairs_the_limits() -> None:
-    """What remains is a recognition policy and the range limits, in one pair."""
-    form = _binding_form_source()
-    advanced = form.split('el("details", "advanced")', 1)[1]
+def test_set_once_options_sit_in_the_section_they_belong_to() -> None:
+    """Rotation limits behind Rotation's own toggle; the response by short press.
 
-    assert '"button_response"' in advanced
-    # Adjacent in source order, so the two-column grid cannot split the pair
-    # across separate rows the way the old flat ordering did.
-    minimum = advanced.index('"min_brightness"')
-    maximum = advanced.index('"max_brightness"')
-    acceleration = advanced.index('"acceleration"')
+    The response decides when a short press runs and which gestures exist, so
+    it sits with the short press rather than in a disclosure.
+    """
+    form = _binding_form_source()
+    rotation = form.split('this._t("rotation_more")', 1)[1].split(
+        'this._formSection(sections, "short_press")', 1
+    )[0]
+    short_press = form.split('this._formSection(sections, "short_press")', 1)[1]
+
+    # Adjacent in source order, so the two-column grid keeps the pair together.
+    minimum = rotation.index('"min_brightness"')
+    maximum = rotation.index('"max_brightness"')
+    acceleration = rotation.index('"acceleration"')
     assert minimum < maximum < acceleration
+    assert '"step_curve"' in rotation
+    assert '"button_response"' in short_press
 
 
 def test_every_gesture_is_its_own_section() -> None:
@@ -831,7 +841,7 @@ def test_channel_detail_uses_the_versioned_read_model_actions() -> None:
     """Gesture rows come from panel_models, never from frontend guesses."""
     asset = _asset()
 
-    assert "this._ledgerRows(channel.actions || [], actionValue)" in asset
+    assert "this._ledgerRows(channel.actions || [])" in asset
     assert "const action = summaries[index];" in asset
     assert "action.gesture_label" in asset
     assert "action.action_label" in asset
