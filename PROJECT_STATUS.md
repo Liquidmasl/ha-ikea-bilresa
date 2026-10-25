@@ -21,9 +21,10 @@ What changed (`frontend/ikea_bilresa_panel.js`, `panel_strings.py`, tests):
   limits sit behind "More rotation settings"; "Advanced options" is gone.
 - Header: Save and Discard replace Edit in one grid cell. Discard is
   two-stage with unsaved changes (0.5 s double-click guard, 4 s timeout).
-- Read view: gesture/action/target columns, no "add an action" row, channel
-  LED dots, dual-button outline with a dot on the configured half; a
-  switched-off channel fades and shows its note on the summary line.
+- Read view: "action · target" with the dot aligned across cards (fixed
+  column shares), no "add an action" row, channel LED dots, dual-button
+  outline with a dot on the configured half; a switched-off channel fades
+  and shows its note on the summary line.
 - `validation_target_required` / `validation_ramp_requires_light` now have
   panel strings.
 

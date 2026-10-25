@@ -25,10 +25,10 @@ and this project adheres to [Semantic Versioning 2.0.0](https://semver.org/spec/
   Home Assistant's own pickers. While editing, Save and Discard take the place
   of Edit at the same width. Discard closes an untouched editor at once and
   asks for a second press when there are unsaved changes.
-- **Reading a channel is quicker.** Gesture, action and target are columns.
-  A switched-off channel fades and says so in its header without growing.
-  Wheel channels show the three channel LEDs; dual-button cards show which
-  half of the button they are.
+- **Reading a channel is quicker.** Each row reads "action · target", and
+  the dots line up across every card. A switched-off channel fades and says
+  so in its header without growing. Wheel channels show the three channel
+  LEDs; dual-button cards show which half of the button they are.
 
 Stored bindings and runtime behaviour are unchanged.
 

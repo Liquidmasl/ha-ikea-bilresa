@@ -754,16 +754,27 @@ const STYLES = `
     border-block-start: 1px solid var(--_divider);
     list-style: none;
   }
+  /* Fixed shares of the card, not content-sized tracks: every card is as wide
+     as the next, so the dots between action and target line up across all
+     channels, and a card without targets keeps the same columns. */
   .channel-action {
     display: grid;
-    grid-template-columns: minmax(180px, 0.65fr) minmax(0, 0.6fr) minmax(0, 0.75fr);
-    gap: var(--_space-6);
+    grid-template-columns: minmax(180px, 0.65fr) minmax(0, 0.5fr) 1.5em minmax(0, 1fr);
+    column-gap: 0;
     align-items: center;
     min-inline-size: 0;
     padding: var(--_space-4) var(--_card-pad, 0px);
     border-block-end: 1px solid var(--_divider);
   }
+  /* Action against the dot, target from it: one phrase, the dot its axis. */
+  .channel-action-value:not(.channel-action-target) { text-align: end; }
+  .channel-action-dot {
+    text-align: center;
+    color: var(--_ink-dim);
+    font-weight: var(--ha-font-weight-medium, 500);
+  }
   .channel-action-label {
+    padding-inline-end: var(--_space-6);
     min-inline-size: 0;
     display: flex;
     align-items: center;
@@ -1394,11 +1405,10 @@ const STYLES = `
     .field[data-wide="true"] { grid-column: auto; }
     .channel-detail-head { display: grid; }
     .channel-action {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      gap: var(--_space-2) var(--_space-4);
+      grid-template-columns: minmax(0, 0.8fr) 1.5em minmax(0, 1fr);
+      row-gap: var(--_space-2);
     }
     .channel-action-label { grid-column: 1 / -1; }
-    .channel-action-value:not(.channel-action-target) { padding-inline-start: 37px; }
     .fact {
       grid-template-columns: minmax(0, 1fr);
       gap: var(--_space-1);
@@ -3343,9 +3353,9 @@ class IkeaBilresaPanel extends HTMLElement {
       (channel.actions || []).length
     ) {
       const actions = el("ul", "channel-action-list");
-      // Gesture, action and target in columns, so a glance down the card
-      // reads one kind of fact at a time. Gestures without an action are
-      // left out; Edit is the way to add one.
+      // "Action · target" reads as one phrase, and the dots line up down the
+      // card, so the eye still finds one kind of fact per column. Gestures
+      // without an action are left out; Edit is the way to add one.
       for (const row of this._ledgerRows(channel.actions || [])) {
         const item = el("li", "channel-action");
         if (row.warning) item.dataset.state = "warning";
@@ -3354,6 +3364,7 @@ class IkeaBilresaPanel extends HTMLElement {
         label.appendChild(el("span", null, row.label));
         item.appendChild(label);
         item.appendChild(el("span", "channel-action-value", row.action));
+        item.appendChild(el("span", "channel-action-dot", row.target ? "·" : ""));
         item.appendChild(
           el("span", "channel-action-value channel-action-target", row.target || ""),
         );
